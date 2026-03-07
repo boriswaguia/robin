@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Inbox, ScanLine, ChevronRight, AlertTriangle, Search, X } from 'lucide-react';
-import { getAllMail, searchMail } from '../services/api';
+import { Inbox, ScanLine, ChevronRight, AlertTriangle, Search, X, Bell } from 'lucide-react';
+import { getAllMail, searchMail, getDueReminders } from '../services/api';
 import MailCard from './MailCard';
 
 export default function Dashboard() {
@@ -11,6 +11,8 @@ export default function Dashboard() {
   const [showSearch, setShowSearch] = useState(false);
   const [searchParams, setSearchParams] = useState({ q: '', sender: '', receiver: '', dateFrom: '', dateTo: '' });
   const [isSearching, setIsSearching] = useState(false);
+  const [reminders, setReminders] = useState([]);
+  const [dismissedReminders, setDismissedReminders] = useState(new Set());
 
   const fetchMail = useCallback(() => {
     return getAllMail()
@@ -38,7 +40,12 @@ export default function Dashboard() {
         if (prev.some((m) => m.status === 'processing')) fetchMail();
         return prev;
       });
+      // Also check for due reminders
+      getDueReminders().then(setReminders).catch(() => {});
     }, 3000);
+
+    // Initial reminder check
+    getDueReminders().then(setReminders).catch(() => {});
 
     return () => clearInterval(interval);
   }, [fetchMail]);
@@ -75,6 +82,24 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
+      {reminders.filter((r) => !dismissedReminders.has(r.id)).length > 0 && (
+        <div className="reminders-banner">
+          <div className="reminders-title"><Bell size={16} /> Reminders</div>
+          {reminders.filter((r) => !dismissedReminders.has(r.id)).map((r) => (
+            <Link to={`/mail/${r.id}`} key={r.id} className="reminder-item">
+              <div className="reminder-content">
+                <strong>{r.sender || 'Mail'}</strong>
+                <span>{r.summary || 'Reminder due'}</span>
+                {r.dueDate && <span className="reminder-due">Due: {new Date(r.dueDate).toLocaleDateString()}</span>}
+              </div>
+              <button className="reminder-dismiss" onClick={(e) => { e.preventDefault(); setDismissedReminders((prev) => new Set([...prev, r.id])); }}>
+                <X size={14} />
+              </button>
+            </Link>
+          ))}
+        </div>
+      )}
+
       {mail.length > 0 && (
         <div className="stats-row">
           <div className="stat-card">

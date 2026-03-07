@@ -148,3 +148,23 @@ export async function getRelatedMail(threadId, excludeId, userId) {
     },
   });
 }
+
+/** Get reminders that are due for a specific user */
+export async function getDueReminders(userId) {
+  return prisma.mail.findMany({
+    where: {
+      userId,
+      reminderAt: { lte: new Date() },
+      reminderSent: false,
+    },
+    orderBy: { reminderAt: 'asc' },
+  });
+}
+
+/** Mark a reminder as sent */
+export async function markReminderSent(id) {
+  return prisma.mail.update({
+    where: { id },
+    data: { reminderSent: true },
+  });
+}

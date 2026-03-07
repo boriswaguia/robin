@@ -3,9 +3,11 @@ const API_BASE = '/api/mail';
 // All requests include credentials so the httpOnly session cookie is sent automatically
 const OPTS = { credentials: 'include' };
 
-export async function scanMail(imageFile) {
+export async function scanMail(files) {
   const formData = new FormData();
-  formData.append('image', imageFile);
+  // Support single file or array of files
+  const fileList = Array.isArray(files) ? files : [files];
+  fileList.forEach((f) => formData.append('images', f));
 
   const res = await fetch(`${API_BASE}/scan`, {
     method: 'POST',
@@ -72,5 +74,36 @@ export async function getContacts() {
 export async function getMailByContact(name) {
   const res = await fetch(`${API_BASE}/contacts/${encodeURIComponent(name)}`, OPTS);
   if (!res.ok) throw new Error('Failed to fetch contact mail');
+  return res.json();
+}
+
+export async function editMail(id, fields) {
+  const res = await fetch(`${API_BASE}/${id}/edit`, {
+    method: 'PATCH',
+    ...OPTS,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fields),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Edit failed' }));
+    throw new Error(err.error || 'Failed to edit mail');
+  }
+  return res.json();
+}
+
+export async function setReminder(id, reminderAt) {
+  const res = await fetch(`${API_BASE}/${id}/reminder`, {
+    method: 'PATCH',
+    ...OPTS,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reminderAt }),
+  });
+  if (!res.ok) throw new Error('Failed to set reminder');
+  return res.json();
+}
+
+export async function getDueReminders() {
+  const res = await fetch(`${API_BASE}/reminders/due`, OPTS);
+  if (!res.ok) throw new Error('Failed to fetch reminders');
   return res.json();
 }

@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuid } from 'uuid';
 import { analyzeMail, findRelatedMail } from '../services/ai.js';
-import { getAllMail, getMailById, saveMail, updateMail, deleteMail, getRelatedMail, searchMail, getContacts, getMailByContact } from '../services/storage.js';
+import { getAllMail, getMailById, saveMail, updateMail, deleteMail, getRelatedMail, searchMail, getContacts, getMailByContact, getDueReminders } from '../services/storage.js';
 import { authenticate } from '../middleware/auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -33,25 +33,27 @@ const upload = multer({
   },
 });
 
-// POST /api/mail/scan — upload & queue async processing
-router.post('/scan', upload.single('image'), async (req, res) => {
+// POST /api/mail/scan — upload & queue async processing (supports multi-page: up to 10 images)
+router.post('/scan', upload.array('images', 10), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No image file provided' });
+    const files = req.files || (req.file ? [req.file] : []);
+    if (files.length === 0) {
+      return res.status(400).json({ error: 'No image file(s) provided' });
     }
 
-    const imageUrl = `/uploads/${req.file.filename}`;
-    const imagePath = req.file.path;
+    const imageUrls = files.map((f) => `/uploads/${f.filename}`);
+    const imagePaths = files.map((f) => f.path);
 
     // Save immediately with status "processing" — return fast
     const mailItem = await saveMail({
       userId: req.user.id,
-      imageUrl,
+      imageUrl: imageUrls[0], // primary/thumbnail image
+      imageUrls,              // all pages
       status: 'processing',
     });
 
     // Fire-and-forget: process in background
-    processMailAsync(mailItem.id, req.user.id, imagePath).catch((err) => {
+    processMailAsync(mailItem.id, req.user.id, imagePaths).catch((err) => {
       console.error(`Background processing failed for mail ${mailItem.id}:`, err);
     });
 
@@ -66,9 +68,9 @@ router.post('/scan', upload.single('image'), async (req, res) => {
 /**
  * Process a mail item in the background: run Gemini OCR+analysis, then update the DB record.
  */
-async function processMailAsync(mailId, userId, imagePath) {
+async function processMailAsync(mailId, userId, imagePaths) {
   try {
-    const analysis = await analyzeMail(imagePath);
+    const analysis = await analyzeMail(imagePaths);
 
     // Try to find related/follow-up mail
     let threadId = mailId; // default: new thread = own ID
@@ -87,6 +89,21 @@ async function processMailAsync(mailId, userId, imagePath) {
       console.error('Mail matching error (non-fatal):', matchErr.message);
     }
 
+    // Auto-set reminder: 2 days before due date (if in the future)
+    let reminderAt = null;
+    if (analysis.dueDate) {
+      try {
+        const due = new Date(analysis.dueDate);
+        const reminder = new Date(due.getTime() - 2 * 24 * 60 * 60 * 1000); // 2 days before
+        if (reminder > new Date()) {
+          reminderAt = reminder;
+        } else if (due > new Date()) {
+          // Due date is within 2 days — remind now
+          reminderAt = new Date();
+        }
+      } catch { /* invalid date, skip */ }
+    }
+
     await updateMail(mailId, userId, {
       extractedText: analysis.extractedText || '',
       summary: analysis.summary,
@@ -100,6 +117,7 @@ async function processMailAsync(mailId, userId, imagePath) {
       keyDetails: analysis.keyDetails || [],
       actionableInfo: analysis.actionableInfo || [],
       threadId,
+      reminderAt,
       status: 'new', // processing complete → ready for user action
     });
 
@@ -141,6 +159,40 @@ router.get('/contacts', async (req, res) => {
 router.get('/contacts/:name', async (req, res) => {
   const items = await getMailByContact(req.user.id, decodeURIComponent(req.params.name));
   res.json(items);
+});
+
+// PATCH /api/mail/:id/edit — edit extracted fields (correction flow)
+router.patch('/:id/edit', async (req, res) => {
+  const editableFields = ['summary', 'sender', 'receiver', 'category', 'urgency', 'dueDate', 'amountDue', 'actionableInfo'];
+  const updates = {};
+  for (const field of editableFields) {
+    if (req.body[field] !== undefined) {
+      updates[field] = req.body[field];
+    }
+  }
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'No valid fields to update' });
+  }
+  const updated = await updateMail(req.params.id, req.user.id, updates);
+  if (!updated) return res.status(404).json({ error: 'Mail not found' });
+  res.json(updated);
+});
+
+// PATCH /api/mail/:id/reminder — set or clear a reminder
+router.patch('/:id/reminder', async (req, res) => {
+  const { reminderAt } = req.body;
+  const updated = await updateMail(req.params.id, req.user.id, {
+    reminderAt: reminderAt ? new Date(reminderAt) : null,
+    reminderSent: false,
+  });
+  if (!updated) return res.status(404).json({ error: 'Mail not found' });
+  res.json(updated);
+});
+
+// GET /api/mail/reminders/due — get reminders that are due (for in-app notification polling)
+router.get('/reminders/due', async (req, res) => {
+  const dueReminders = await getDueReminders(req.user.id);
+  res.json(dueReminders);
 });
 
 // GET /api/mail/:id — get single mail item (with related mail)

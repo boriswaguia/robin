@@ -1612,3 +1612,318 @@ ul { list-style: none; }
   padding: 12px 0;
 }
 
+/* ── Multi-page Scanner ───────────────────────────────────────────────────── */
+.pages-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pages-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+}
+
+.page-thumb {
+  position: relative;
+  aspect-ratio: 3/4;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.page-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.page-number {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background: var(--primary);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.page-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(0,0,0,0.55);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1;
+  padding: 0;
+}
+
+.page-pdf {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  text-align: center;
+  padding: 4px;
+}
+
+.page-thumb.add-page {
+  border: 2px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: transparent;
+  font-size: 0.75rem;
+  transition: border-color 0.15s, color 0.15s;
+}
+.page-thumb.add-page:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.btn-link.clear-all {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-align: center;
+  padding: 4px 0;
+}
+.btn-link.clear-all:hover { color: var(--text); }
+
+/* ── Edit Mode ────────────────────────────────────────────────────────────── */
+.detail-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-btn, .reminder-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  transition: color 0.15s, border-color 0.15s;
+}
+.edit-btn:hover { color: var(--primary); border-color: var(--primary); }
+.reminder-btn:hover { color: #f59e0b; border-color: #f59e0b; }
+
+.edit-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.edit-field label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.edit-field input,
+.edit-field textarea,
+.edit-row select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.edit-field textarea {
+  resize: vertical;
+  min-height: 48px;
+}
+
+.edit-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.edit-row select {
+  padding: 6px 8px;
+  font-size: 0.85rem;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.btn-sm {
+  padding: 6px 12px !important;
+  font-size: 0.82rem !important;
+  gap: 4px !important;
+}
+
+/* ── Reminder Banner ──────────────────────────────────────────────────────── */
+.reminder-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  color: #92400e;
+  margin-bottom: 8px;
+}
+
+.reminder-banner button {
+  background: none;
+  border: none;
+  color: #92400e;
+  cursor: pointer;
+  padding: 2px;
+  margin-left: auto;
+}
+
+.reminders-banner {
+  background: #fffbeb;
+  border: 1px solid #fbbf24;
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.reminders-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #92400e;
+  background: #fef3c7;
+  border-bottom: 1px solid #fde68a;
+}
+
+.reminder-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  text-decoration: none;
+  color: var(--text);
+  border-bottom: 1px solid #fde68a;
+  transition: background 0.15s;
+}
+.reminder-item:last-child { border-bottom: none; }
+.reminder-item:hover { background: #fef3c7; }
+
+.reminder-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.reminder-content strong {
+  font-size: 0.85rem;
+}
+.reminder-content span {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.reminder-due {
+  color: #b45309 !important;
+  font-weight: 500;
+}
+
+.reminder-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+/* ── Page Navigation (multi-page image viewer) ────────────────────────────── */
+.page-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.page-nav button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 8px;
+  cursor: pointer;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+}
+.page-nav button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.page-nav button:not(:disabled):hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* ── Rejected mail card ───────────────────────────────────────────────────── */
+.mail-card.rejected .mail-card-body {
+  color: #b91c1c;
+}
+.mail-card.rejected .mail-card-body p {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+

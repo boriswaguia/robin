@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, FileText, Image, CalendarPlus, ClipboardList, Copy, Check, Link2, Landmark } from 'lucide-react';
+import { ArrowLeft, Trash2, FileText, Image, CalendarPlus, ClipboardList, Copy, Check, Link2, Landmark, Pencil, Save, X, Bell, BellOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { getMailById, deleteMailItem } from '../services/api';
+import { getMailById, deleteMailItem, editMail, setReminder } from '../services/api';
 import { getCategoryColor, getCategoryIcon, formatDate } from '../utils';
 import { downloadCalendarEvent } from '../services/calendar';
 import { extractSepaFields } from '../services/sepa';
 import SepaPayModal from './SepaPayModal';
 import ActionPanel from './ActionPanel';
+
+const CATEGORIES = ['bill', 'personal', 'government', 'legal', 'medical', 'insurance', 'financial', 'advertisement', 'subscription', 'tax', 'other'];
+const URGENCIES = ['low', 'medium', 'high'];
 
 export default function MailDetail() {
   const { id } = useParams();
@@ -18,6 +21,10 @@ export default function MailDetail() {
   const [showImage, setShowImage] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
   const [showSepa, setShowSepa] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editFields, setEditFields] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
 
   useEffect(() => {
     getMailById(id)
@@ -32,11 +39,73 @@ export default function MailDetail() {
     navigate('/');
   }
 
+  function startEditing() {
+    setEditFields({
+      summary: item.summary || '',
+      sender: item.sender || '',
+      receiver: item.receiver || '',
+      category: item.category || 'other',
+      urgency: item.urgency || 'low',
+      dueDate: item.dueDate || '',
+      amountDue: item.amountDue || '',
+    });
+    setEditing(true);
+  }
+
+  async function saveEdits() {
+    setSaving(true);
+    try {
+      const updates = {};
+      for (const [key, value] of Object.entries(editFields)) {
+        if (value !== (item[key] || '')) {
+          updates[key] = value || null;
+        }
+      }
+      if (Object.keys(updates).length > 0) {
+        const updated = await editMail(id, updates);
+        setItem((prev) => ({ ...prev, ...updated }));
+      }
+      setEditing(false);
+    } catch (err) {
+      alert('Failed to save: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggleReminder() {
+    try {
+      if (item.reminderAt) {
+        // Clear reminder
+        const updated = await setReminder(id, null);
+        setItem((prev) => ({ ...prev, ...updated }));
+      } else if (item.dueDate) {
+        // Set reminder 2 days before due date
+        const due = new Date(item.dueDate);
+        const reminder = new Date(due.getTime() - 2 * 24 * 60 * 60 * 1000);
+        const reminderDate = reminder > new Date() ? reminder : new Date();
+        const updated = await setReminder(id, reminderDate.toISOString());
+        setItem((prev) => ({ ...prev, ...updated }));
+      } else {
+        // No due date — set reminder for tomorrow
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(9, 0, 0, 0);
+        const updated = await setReminder(id, tomorrow.toISOString());
+        setItem((prev) => ({ ...prev, ...updated }));
+      }
+    } catch (err) {
+      alert('Failed to set reminder: ' + err.message);
+    }
+  }
+
   if (loading) return <div className="loading">Loading…</div>;
   if (!item) return null;
 
   const sepaFields = extractSepaFields(item.actionableInfo || []);
   const hasSepa = !!sepaFields.iban;
+  const imageUrls = item.imageUrls || [item.imageUrl];
+  const isMultiPage = imageUrls.length > 1;
 
   return (
     <div className="mail-detail">
@@ -44,27 +113,95 @@ export default function MailDetail() {
         <button className="back-btn" onClick={() => navigate('/')}>
           <ArrowLeft size={20} /> Back
         </button>
-        <button className="delete-btn" onClick={handleDelete}>
-          <Trash2 size={18} />
-        </button>
+        <div className="detail-header-actions">
+          {!editing && (
+            <button className="edit-btn" onClick={startEditing} title="Edit fields">
+              <Pencil size={18} />
+            </button>
+          )}
+          <button className="reminder-btn" onClick={toggleReminder} title={item.reminderAt ? 'Clear reminder' : 'Set reminder'}>
+            {item.reminderAt ? <BellOff size={18} /> : <Bell size={18} />}
+          </button>
+          <button className="delete-btn" onClick={handleDelete}>
+            <Trash2 size={18} />
+          </button>
+        </div>
       </div>
+
+      {item.reminderAt && (
+        <div className="reminder-banner">
+          <Bell size={14} />
+          <span>Reminder set for {new Date(item.reminderAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+          <button onClick={toggleReminder}><X size={14} /></button>
+        </div>
+      )}
 
       <div className="detail-card">
         <div className="detail-top">
-          <span className={`category-badge ${getCategoryColor(item.category)}`}>
-            {getCategoryIcon(item.category)} {item.category}
-          </span>
-          {item.urgency === 'high' && <span className="urgency-badge">Urgent</span>}
-          {item.urgency === 'medium' && <span className="urgency-badge medium">Medium</span>}
+          {editing ? (
+            <div className="edit-row">
+              <select value={editFields.category} onChange={(e) => setEditFields({ ...editFields, category: e.target.value })}>
+                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <select value={editFields.urgency} onChange={(e) => setEditFields({ ...editFields, urgency: e.target.value })}>
+                {URGENCIES.map((u) => <option key={u} value={u}>{u}</option>)}
+              </select>
+            </div>
+          ) : (
+            <>
+              <span className={`category-badge ${getCategoryColor(item.category)}`}>
+                {getCategoryIcon(item.category)} {item.category}
+              </span>
+              {item.urgency === 'high' && <span className="urgency-badge">Urgent</span>}
+              {item.urgency === 'medium' && <span className="urgency-badge medium">Medium</span>}
+            </>
+          )}
         </div>
 
-        <h2>{item.sender || 'Unknown Sender'}</h2>
-        {item.receiver && item.receiver !== 'Unknown' && (
-          <p className="receiver-line">To: {item.receiver}</p>
+        {editing ? (
+          <div className="edit-fields">
+            <div className="edit-field">
+              <label>Sender</label>
+              <input value={editFields.sender} onChange={(e) => setEditFields({ ...editFields, sender: e.target.value })} />
+            </div>
+            <div className="edit-field">
+              <label>Receiver</label>
+              <input value={editFields.receiver} onChange={(e) => setEditFields({ ...editFields, receiver: e.target.value })} />
+            </div>
+            <div className="edit-field">
+              <label>Summary</label>
+              <textarea value={editFields.summary} onChange={(e) => setEditFields({ ...editFields, summary: e.target.value })} rows={2} />
+            </div>
+            <div className="edit-row">
+              <div className="edit-field">
+                <label>Amount Due</label>
+                <input value={editFields.amountDue} onChange={(e) => setEditFields({ ...editFields, amountDue: e.target.value })} placeholder="e.g. €45.00" />
+              </div>
+              <div className="edit-field">
+                <label>Due Date</label>
+                <input type="date" value={editFields.dueDate?.split('T')[0] || ''} onChange={(e) => setEditFields({ ...editFields, dueDate: e.target.value ? new Date(e.target.value).toISOString() : '' })} />
+              </div>
+            </div>
+            <div className="edit-actions">
+              <button className="btn btn-primary btn-sm" onClick={saveEdits} disabled={saving}>
+                <Save size={16} /> {saving ? 'Saving…' : 'Save Changes'}
+              </button>
+              <button className="btn btn-secondary btn-sm" onClick={() => setEditing(false)} disabled={saving}>
+                <X size={16} /> Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <h2>{item.sender || 'Unknown Sender'}</h2>
+            {item.receiver && item.receiver !== 'Unknown' && (
+              <p className="receiver-line">To: {item.receiver}</p>
+            )}
+            <p className="summary">{item.summary}</p>
+          </>
         )}
-        <p className="summary">{item.summary}</p>
 
-        {item.keyDetails && item.keyDetails.length > 0 && (
+        {!editing && item.keyDetails && item.keyDetails.length > 0 && (
           <div className="key-details">
             <h4>Key Details</h4>
             <ul>
@@ -75,26 +212,34 @@ export default function MailDetail() {
           </div>
         )}
 
-        <div className="detail-meta">
-          {item.amountDue && (
+        {!editing && (
+          <div className="detail-meta">
+            {item.amountDue && (
+              <div className="meta-item">
+                <span className="meta-label">Amount Due</span>
+                <span className="meta-value amount">{item.amountDue}</span>
+              </div>
+            )}
+            {item.dueDate && (
+              <div className="meta-item">
+                <span className="meta-label">Due Date</span>
+                <span className="meta-value">{new Date(item.dueDate).toLocaleDateString()}</span>
+              </div>
+            )}
             <div className="meta-item">
-              <span className="meta-label">Amount Due</span>
-              <span className="meta-value amount">{item.amountDue}</span>
+              <span className="meta-label">Scanned</span>
+              <span className="meta-value">{formatDate(item.createdAt)}</span>
             </div>
-          )}
-          {item.dueDate && (
-            <div className="meta-item">
-              <span className="meta-label">Due Date</span>
-              <span className="meta-value">{new Date(item.dueDate).toLocaleDateString()}</span>
-            </div>
-          )}
-          <div className="meta-item">
-            <span className="meta-label">Scanned</span>
-            <span className="meta-value">{formatDate(item.createdAt)}</span>
+            {isMultiPage && (
+              <div className="meta-item">
+                <span className="meta-label">Pages</span>
+                <span className="meta-value">{imageUrls.length}</span>
+              </div>
+            )}
           </div>
-        </div>
+        )}
 
-        {item.dueDate && (
+        {!editing && item.dueDate && (
           <button
             className="btn btn-calendar"
             onClick={() => downloadCalendarEvent(item)}
@@ -104,14 +249,14 @@ export default function MailDetail() {
           </button>
         )}
 
-        {hasSepa && (
+        {!editing && hasSepa && (
           <button className="btn btn-sepa" onClick={() => setShowSepa(true)}>
             <Landmark size={18} />
             <span>Pay via SEPA</span>
           </button>
         )}
 
-        {item.actionableInfo && item.actionableInfo.length > 0 && (
+        {!editing && item.actionableInfo && item.actionableInfo.length > 0 && (
           <div className="actionable-info">
             <h4><ClipboardList size={16} /> What You Need</h4>
             <div className="actionable-grid">
@@ -131,8 +276,8 @@ export default function MailDetail() {
         )}
 
         <div className="detail-toggles">
-          <button className="toggle-btn" onClick={() => setShowImage(!showImage)}>
-            <Image size={16} /> {showImage ? 'Hide' : 'Show'} Original Image
+          <button className="toggle-btn" onClick={() => { setShowImage(!showImage); setCurrentPage(0); }}>
+            <Image size={16} /> {showImage ? 'Hide' : 'Show'} Original{isMultiPage ? ` (${imageUrls.length} pages)` : ' Image'}
           </button>
           <button className="toggle-btn" onClick={() => setShowText(!showText)}>
             <FileText size={16} /> {showText ? 'Hide' : 'Show'} Extracted Text
@@ -141,10 +286,21 @@ export default function MailDetail() {
 
         {showImage && (
           <div className="original-image">
-            {item.imageUrl?.endsWith('.pdf') ? (
-              <iframe src={item.imageUrl} title="Scanned mail PDF" className="pdf-embed" />
+            {isMultiPage && (
+              <div className="page-nav">
+                <button disabled={currentPage === 0} onClick={() => setCurrentPage((p) => p - 1)}>
+                  <ChevronLeft size={18} />
+                </button>
+                <span>Page {currentPage + 1} of {imageUrls.length}</span>
+                <button disabled={currentPage === imageUrls.length - 1} onClick={() => setCurrentPage((p) => p + 1)}>
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            )}
+            {imageUrls[currentPage]?.endsWith('.pdf') ? (
+              <iframe src={imageUrls[currentPage]} title="Scanned mail PDF" className="pdf-embed" />
             ) : (
-              <img src={item.imageUrl} alt="Scanned mail" />
+              <img src={imageUrls[currentPage]} alt={`Page ${currentPage + 1}`} />
             )}
           </div>
         )}
@@ -158,7 +314,6 @@ export default function MailDetail() {
         <div className="related-mail">
           <h3><Link2 size={18} /> Related Mail ({item.relatedMail.length + 1} in thread)</h3>
           <div className="related-timeline">
-            {/* Current item marker */}
             <div className="timeline-item current">
               <div className="timeline-dot" />
               <div className="timeline-content">

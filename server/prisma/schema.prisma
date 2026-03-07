@@ -22,6 +22,7 @@ model Mail {
   userId         String
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   imageUrl       String
+  imageUrls      Json?    // Array of image URLs for multi-page documents
   extractedText  String?
   summary        String?
   sender         String?
@@ -35,6 +36,8 @@ model Mail {
   paymentDetails Json?
   actionableInfo Json?
   threadId       String?
+  reminderAt     DateTime? // When to send a reminder notification
+  reminderSent   Boolean  @default(false)
   status         String   @default("new")
   actionTaken    String?
   actionNote     String?
@@ -47,4 +50,5 @@ model Mail {
   @@index([userId, threadId])
   @@index([userId, sender])
   @@index([userId, receiver])
+  @@index([reminderAt, reminderSent])
 }
