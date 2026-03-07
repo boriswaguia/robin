@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, Upload, Loader2, X, ImagePlus, FileText } from 'lucide-react';
+import { Camera, Upload, Loader2, X, ImagePlus, FileText, Clipboard } from 'lucide-react';
 import { scanMail } from '../services/api';
 
 export default function Scanner() {
@@ -12,6 +12,29 @@ export default function Scanner() {
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const navigate = useNavigate();
+
+  // Listen for Ctrl+V paste from clipboard (e.g. Windows Snipping Tool)
+  useEffect(() => {
+    function handlePaste(e) {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const blob = item.getAsFile();
+          if (blob) {
+            // Give the blob a readable filename
+            const ext = item.type.split('/')[1] || 'png';
+            const named = new File([blob], `clipboard-${Date.now()}.${ext}`, { type: item.type });
+            handleFile(named);
+          }
+          return;
+        }
+      }
+    }
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, []);
 
   function handleFile(f) {
     if (!f) return;
@@ -66,7 +89,8 @@ export default function Scanner() {
           onClick={() => fileInputRef.current?.click()}
         >
           <ImagePlus size={48} strokeWidth={1.5} />
-          <p>Drop an image or PDF here or tap to browse</p>
+          <p>Drop an image or PDF here, or tap to browse</p>
+          <p className="paste-hint"><Clipboard size={14} /> or press <kbd>Ctrl+V</kbd> to paste a screenshot</p>
           <input
             ref={fileInputRef}
             type="file"
