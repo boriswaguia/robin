@@ -1,0 +1,9 @@
+# Local development overrides — NOT used in production
+# This file is automatically merged by docker compose when running locally.
+# It exposes the database port to the host so you can run:
+#   npx prisma migrate dev
+#   npx prisma studio
+services:
+  db:
+    ports:
+      - "5433:5432"

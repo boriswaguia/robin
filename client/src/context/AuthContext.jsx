@@ -1,0 +1,44 @@
+import { createContext, useContext, useState, useEffect } from 'react';
+
+const AuthContext = createContext(null);
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // On mount, check if a valid session cookie exists
+  useEffect(() => {
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then((res) => {
+        if (!res.ok) throw new Error('No session');
+        return res.json();
+      })
+      .then((userData) => setUser(userData))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  function login(userData) {
+    // Token is stored in an httpOnly cookie by the server — we never touch it
+    setUser(userData);
+  }
+
+  async function logout() {
+    // Ask the server to clear the cookie
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    setUser(null);
+  }
+
+  return (
+    <AuthContext.Provider value={{ user, loading, login, logout, isAuthenticated: !!user }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
+}
+
