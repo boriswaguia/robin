@@ -1,9 +1,10 @@
 import { getCategoryColor, getCategoryIcon, formatDate } from '../utils';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, ShieldX } from 'lucide-react';
 
 export default function MailCard({ item }) {
   const isProcessing = item.status === 'processing';
   const isError = item.status === 'error';
+  const isRejected = item.status === 'rejected';
 
   if (isProcessing) {
     return (
@@ -12,6 +13,21 @@ export default function MailCard({ item }) {
           <Loader2 size={20} className="spin" />
           <h4>Processing mail…</h4>
           <p>Reading and categorizing your mail</p>
+        </div>
+        <div className="mail-card-footer">
+          <span className="date">{formatDate(item.createdAt)}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (isRejected) {
+    return (
+      <div className="mail-card error rejected">
+        <div className="mail-card-body">
+          <ShieldX size={20} />
+          <h4>Document rejected</h4>
+          <p>{item.extractedText?.replace('Document rejected: ', '') || 'This does not appear to be valid postal mail.'}</p>
         </div>
         <div className="mail-card-footer">
           <span className="date">{formatDate(item.createdAt)}</span>

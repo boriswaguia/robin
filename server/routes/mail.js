@@ -105,10 +105,13 @@ async function processMailAsync(mailId, userId, imagePath) {
 
     console.log(`Mail ${mailId} processed successfully`);
   } catch (err) {
-    // Mark as failed so the UI can show an error state
+    // Distinguish rejected documents from processing failures
+    const isRejected = err.code === 'DOCUMENT_REJECTED';
     await updateMail(mailId, userId, {
-      status: 'error',
-      extractedText: `Processing failed: ${err.message}`,
+      status: isRejected ? 'rejected' : 'error',
+      extractedText: isRejected
+        ? `Document rejected: ${err.message}`
+        : `Processing failed: ${err.message}`,
     }).catch(() => {});
 
     throw err;
