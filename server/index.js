@@ -34,20 +34,23 @@ app.use(helmet({
 }));
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
+// In production the server is behind an nginx reverse proxy that handles all
+// routing — the browser only ever talks to one origin, so CORS is a no-op.
+// In development we allow the Vite dev server origins explicitly.
 const allowedOrigins = [
-  ...(process.env.CLIENT_ORIGIN ? [process.env.CLIENT_ORIGIN] : []),
   'http://localhost:5173',
   'http://localhost:80',
   'http://localhost',
 ];
 
 app.use(cors({
-  origin: (origin, cb) => {
-    // Allow requests with no origin (mobile apps, curl, server-to-server)
-    if (!origin) return cb(null, true);
-    if (allowedOrigins.includes(origin)) return cb(null, true);
-    cb(new Error(`CORS: origin '${origin}' not allowed`));
-  },
+  origin: IS_PROD
+    ? true  // reflect origin — server is never publicly exposed, nginx owns the port
+    : (origin, cb) => {
+        if (!origin) return cb(null, true);
+        if (allowedOrigins.includes(origin)) return cb(null, true);
+        cb(new Error(`CORS: origin '${origin}' not allowed`));
+      },
   credentials: true, // required for cookies
 }));
 
