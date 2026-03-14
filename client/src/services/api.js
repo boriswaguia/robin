@@ -107,3 +107,83 @@ export async function getDueReminders() {
   if (!res.ok) throw new Error('Failed to fetch reminders');
   return res.json();
 }
+
+// ── Sharing ─────────────────────────────────────────────────────────────────
+
+const SHARE_BASE = '/api/sharing';
+
+export async function getSharingConnections() {
+  const res = await fetch(`${SHARE_BASE}/connections`, OPTS);
+  if (!res.ok) throw new Error('Failed to fetch connections');
+  return res.json(); // { sent, received }
+}
+
+export async function getPendingInvites() {
+  const res = await fetch(`${SHARE_BASE}/pending`, OPTS);
+  if (!res.ok) throw new Error('Failed to fetch invites');
+  return res.json();
+}
+
+export async function sendSharingInvite(email) {
+  const res = await fetch(`${SHARE_BASE}/invite`, {
+    method: 'POST', ...OPTS,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Invite failed');
+  return data;
+}
+
+export async function acceptInvite(id) {
+  const res = await fetch(`${SHARE_BASE}/${id}/accept`, { method: 'PATCH', ...OPTS });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to accept');
+  return data;
+}
+
+export async function rejectInvite(id) {
+  const res = await fetch(`${SHARE_BASE}/${id}/reject`, { method: 'DELETE', ...OPTS });
+  if (!res.ok) throw new Error('Failed to reject');
+  return res.json();
+}
+
+export async function removeConnection(id) {
+  const res = await fetch(`${SHARE_BASE}/${id}`, { method: 'DELETE', ...OPTS });
+  if (!res.ok) throw new Error('Failed to remove connection');
+  return res.json();
+}
+
+export async function updateSharedCategories(connectionId, categories) {
+  const res = await fetch(`${SHARE_BASE}/${connectionId}/categories`, {
+    method: 'PATCH', ...OPTS,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ categories }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to update categories');
+  return data;
+}
+
+export async function getSharedWithMe() {
+  const res = await fetch(`${SHARE_BASE}/shared-with-me`, OPTS);
+  if (!res.ok) throw new Error('Failed to fetch shared mail');
+  return res.json();
+}
+
+export async function getMailShares(mailId) {
+  const res = await fetch(`${SHARE_BASE}/mail/${mailId}/shares`, OPTS);
+  if (!res.ok) throw new Error('Failed to fetch shares');
+  return res.json(); // { sharedWith: [userId, ...] }
+}
+
+export async function toggleMailShare(mailId, sharedWithUserId, shared) {
+  const res = await fetch(`${SHARE_BASE}/mail/${mailId}/share`, {
+    method: 'POST', ...OPTS,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sharedWithUserId, shared }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to update share');
+  return data; // { sharedWith: [userId, ...] }
+}

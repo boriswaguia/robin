@@ -2069,3 +2069,214 @@ ul { list-style: none; }
   color: var(--text-muted);
 }
 
+/* ── Shared source badge ──────────────────────────────────────────────────── */
+.source-badge.shared {
+  background: rgba(99,102,241,0.12);
+  color: var(--primary);
+}
+
+/* ── Shared section in Dashboard ─────────────────────────────────────────── */
+.shared-section {
+  margin-top: 28px;
+}
+.shared-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 4px 0 10px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+.shared-section-header span { flex: 1; }
+
+/* ── Share panel in MailDetail ────────────────────────────────────────────── */
+.share-panel {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.share-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.share-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+.share-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.share-email {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.shared-by-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: var(--primary);
+  background: rgba(99,102,241,0.1);
+  padding: 4px 10px;
+  border-radius: 99px;
+}
+
+/* ── Sharing section in Integrations ─────────────────────────────────────── */
+.integration-icon.sharing-icon {
+  background: rgba(99,102,241,0.1);
+  color: var(--primary);
+}
+.integration-card + .integration-card {
+  margin-top: 16px;
+}
+.sharing-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 4px;
+}
+.sharing-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+.sharing-invite-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+}
+.sharing-user {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.875rem;
+}
+.sharing-user span {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.sharing-invite-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.sharing-conn-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sharing-conn-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sharing-cats-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.sharing-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cat-chip {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.cat-chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+.cat-chip:hover:not(:disabled):not(.active) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.sharing-cats-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.sharing-invite-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sharing-invite-form input {
+  flex: 1;
+  min-width: 180px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  background: var(--surface);
+  color: var(--text);
+}
+.sharing-invite-form input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+.btn-icon-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  transition: background 0.12s, color 0.12s;
+  flex-shrink: 0;
+}
+.btn-icon-sm:hover {
+  background: var(--bg-secondary);
+  color: var(--danger);
+}
+.btn-sm {
+  padding: 6px 14px !important;
+  font-size: 0.82rem !important;
+}

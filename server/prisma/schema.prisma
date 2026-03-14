@@ -18,6 +18,8 @@ model User {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   mail              Mail[]
+  sharingFrom       ShareConnection[] @relation("SharingFrom")
+  sharingTo         ShareConnection[] @relation("SharingTo")
 }
 
 model Mail {
@@ -48,6 +50,7 @@ model Mail {
   gmailMessageId String?  // prevents duplicate imports
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  shares         MailShare[]
 
   @@index([userId])
   @@index([userId, status])
@@ -57,4 +60,37 @@ model Mail {
   @@index([userId, receiver])
   @@index([reminderAt, reminderSent])
   @@unique([userId, gmailMessageId])
+}
+
+// ── Sharing ──────────────────────────────────────────────────────────────────
+
+// Directional invite: fromUser wants to share mail with toUser
+model ShareConnection {
+  id               String   @id @default(uuid())
+  fromUserId       String
+  toUserId         String
+  fromUser         User     @relation("SharingFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser           User     @relation("SharingTo",   fields: [toUserId],   references: [id], onDelete: Cascade)
+  status           String   @default("pending") // pending | accepted
+  sharedCategories Json?    // null = none auto-shared; ["bill","medical"] = auto-share those categories
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([fromUserId, toUserId])
+  @@index([toUserId])
+  @@index([fromUserId])
+}
+
+// Explicit per-item share override
+model MailShare {
+  id               String   @id @default(uuid())
+  mailId           String
+  mail             Mail     @relation(fields: [mailId], references: [id], onDelete: Cascade)
+  sharedByUserId   String
+  sharedWithUserId String
+  createdAt        DateTime @default(now())
+
+  @@unique([mailId, sharedWithUserId])
+  @@index([sharedWithUserId])
+  @@index([sharedByUserId])
 }

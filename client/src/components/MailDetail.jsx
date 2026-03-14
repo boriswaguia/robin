@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, FileText, Image, CalendarPlus, ClipboardList, Copy, Check, Link2, Landmark, Pencil, Save, X, Bell, BellOff, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Trash2, FileText, Image, CalendarPlus, ClipboardList, Copy, Check, Link2, Landmark, Pencil, Save, X, Bell, BellOff, ChevronLeft, ChevronRight, Share2, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { getMailById, deleteMailItem, editMail, setReminder } from '../services/api';
+import { getMailById, deleteMailItem, editMail, setReminder, getSharingConnections, getMailShares, toggleMailShare } from '../services/api';
 import { getCategoryColor, getCategoryIcon, formatDate } from '../utils';
 import { downloadCalendarEvent } from '../services/calendar';
 import { extractSepaFields } from '../services/sepa';
@@ -25,10 +25,26 @@ export default function MailDetail() {
   const [editFields, setEditFields] = useState({});
   const [saving, setSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
+  // Sharing
+  const [showSharePanel, setShowSharePanel] = useState(false);
+  const [outgoingConns, setOutgoingConns] = useState([]); // accepted connections where I'm the from
+  const [sharedWith, setSharedWith] = useState([]);       // userIds this item is explicitly shared with
+  const [shareUpdating, setShareUpdating] = useState(false);
 
   useEffect(() => {
     getMailById(id)
-      .then(setItem)
+      .then((data) => {
+        setItem(data);
+        // Load sharing data only for items we own
+        if (!data.readOnly) {
+          getSharingConnections()
+            .then((c) => setOutgoingConns((c.sent || []).filter((x) => x.status === 'accepted')))
+            .catch(() => {});
+          getMailShares(id)
+            .then((d) => setSharedWith(d.sharedWith || []))
+            .catch(() => {});
+        }
+      })
       .catch(() => navigate('/'))
       .finally(() => setLoading(false));
   }, [id, navigate]);
@@ -99,12 +115,26 @@ export default function MailDetail() {
     }
   }
 
+  async function handleShareToggle(userId) {
+    const isShared = sharedWith.includes(userId);
+    setShareUpdating(true);
+    try {
+      const result = await toggleMailShare(id, userId, !isShared);
+      setSharedWith(result.sharedWith);
+    } catch (err) {
+      alert('Share failed: ' + err.message);
+    } finally {
+      setShareUpdating(false);
+    }
+  }
+
   if (loading) return <div className="loading">Loading…</div>;
   if (!item) return null;
 
   const sepaFields = extractSepaFields(item.actionableInfo || []);
   const hasSepa = !!sepaFields.iban;
-  const imageUrls = item.imageUrls || [item.imageUrl];
+  const imageUrls = (item.imageUrls || [item.imageUrl]).filter(Boolean);
+  const hasImages = imageUrls.length > 0;
   const isMultiPage = imageUrls.length > 1;
 
   return (
@@ -114,19 +144,57 @@ export default function MailDetail() {
           <ArrowLeft size={20} /> Back
         </button>
         <div className="detail-header-actions">
-          {!editing && (
-            <button className="edit-btn" onClick={startEditing} title="Edit fields">
-              <Pencil size={18} />
-            </button>
+          {item.readOnly ? (
+            <span className="shared-by-badge"><Users size={14} /> Shared by {item.sharedBy?.name}</span>
+          ) : (
+            <>
+              {!editing && (
+                <button className="edit-btn" onClick={startEditing} title="Edit fields">
+                  <Pencil size={18} />
+                </button>
+              )}
+              {outgoingConns.length > 0 && item.source !== 'gmail' && (
+                <button
+                  className={`edit-btn ${showSharePanel ? 'active' : ''}`}
+                  onClick={() => setShowSharePanel((v) => !v)}
+                  title="Share this item"
+                >
+                  <Share2 size={18} />
+                </button>
+              )}
+              <button className="reminder-btn" onClick={toggleReminder} title={item.reminderAt ? 'Clear reminder' : 'Set reminder'}>
+                {item.reminderAt ? <BellOff size={18} /> : <Bell size={18} />}
+              </button>
+              <button className="delete-btn" onClick={handleDelete}>
+                <Trash2 size={18} />
+              </button>
+            </>
           )}
-          <button className="reminder-btn" onClick={toggleReminder} title={item.reminderAt ? 'Clear reminder' : 'Set reminder'}>
-            {item.reminderAt ? <BellOff size={18} /> : <Bell size={18} />}
-          </button>
-          <button className="delete-btn" onClick={handleDelete}>
-            <Trash2 size={18} />
-          </button>
         </div>
       </div>
+
+      {/* Share panel */}
+      {showSharePanel && outgoingConns.length > 0 && (
+        <div className="share-panel">
+          <div className="share-panel-title"><Share2 size={14} /> Share with</div>
+          {outgoingConns.map((conn) => {
+            const isShared = sharedWith.includes(conn.toUser.id);
+            return (
+              <label key={conn.id} className="share-row">
+                <input
+                  type="checkbox"
+                  checked={isShared}
+                  disabled={shareUpdating}
+                  onChange={() => handleShareToggle(conn.toUser.id)}
+                />
+                <span>
+                  <strong>{conn.toUser.name}</strong> <span className="share-email">{conn.toUser.email}</span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      )}
 
       {item.reminderAt && (
         <div className="reminder-banner">
@@ -276,9 +344,11 @@ export default function MailDetail() {
         )}
 
         <div className="detail-toggles">
-          <button className="toggle-btn" onClick={() => { setShowImage(!showImage); setCurrentPage(0); }}>
-            <Image size={16} /> {showImage ? 'Hide' : 'Show'} Original{isMultiPage ? ` (${imageUrls.length} pages)` : ' Image'}
-          </button>
+          {hasImages && (
+            <button className="toggle-btn" onClick={() => { setShowImage(!showImage); setCurrentPage(0); }}>
+              <Image size={16} /> {showImage ? 'Hide' : 'Show'} Original{isMultiPage ? ` (${imageUrls.length} pages)` : ' Image'}
+            </button>
+          )}
           <button className="toggle-btn" onClick={() => setShowText(!showText)}>
             <FileText size={16} /> {showText ? 'Hide' : 'Show'} Extracted Text
           </button>
@@ -341,7 +411,7 @@ export default function MailDetail() {
         </div>
       )}
 
-      <ActionPanel item={item} onUpdate={setItem} />
+      <ActionPanel item={item} onUpdate={setItem} hidden={item.readOnly} />
 
       {showSepa && (
         <SepaPayModal item={item} sepaFields={sepaFields} onClose={() => setShowSepa(false)} />

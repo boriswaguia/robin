@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Inbox, ScanLine, ChevronRight, AlertTriangle, Search, X, Bell } from 'lucide-react';
-import { getAllMail, searchMail, getDueReminders } from '../services/api';
+import { Inbox, ScanLine, ChevronRight, AlertTriangle, Search, X, Bell, Users, ChevronDown, ChevronUp } from 'lucide-react';
+import { getAllMail, searchMail, getDueReminders, getSharedWithMe } from '../services/api';
 import MailCard from './MailCard';
 
 export default function Dashboard() {
@@ -13,6 +13,8 @@ export default function Dashboard() {
   const [isSearching, setIsSearching] = useState(false);
   const [reminders, setReminders] = useState([]);
   const [dismissedReminders, setDismissedReminders] = useState(new Set());
+  const [sharedMail, setSharedMail] = useState([]);
+  const [sharedExpanded, setSharedExpanded] = useState(true);
 
   const fetchMail = useCallback(() => {
     return getAllMail()
@@ -38,6 +40,9 @@ export default function Dashboard() {
         return prev;
       });
     }, 3000);
+
+    // Load shared mail once on mount
+    getSharedWithMe().then(setSharedMail).catch(() => {});
 
     return () => clearInterval(mailInterval);
   }, [fetchMail]);
@@ -211,6 +216,27 @@ export default function Dashboard() {
           ))}
           {filtered.length === 0 && (
             <p className="no-results">No mail matches this filter.</p>
+          )}
+        </div>
+      )}
+
+      {/* Shared with me */}
+      {sharedMail.length > 0 && (
+        <div className="shared-section">
+          <button className="shared-section-header" onClick={() => setSharedExpanded((v) => !v)}>
+            <Users size={16} />
+            <span>Shared with you ({sharedMail.length})</span>
+            {sharedExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+          {sharedExpanded && (
+            <div className="mail-list">
+              {sharedMail.map((item) => (
+                <Link to={`/mail/${item.id}`} key={item.id} className="mail-link">
+                  <MailCard item={item} sharedBy={item.sharedBy} />
+                  <ChevronRight size={18} className="chevron" />
+                </Link>
+              ))}
+            </div>
           )}
         </div>
       )}

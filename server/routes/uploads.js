@@ -27,25 +27,45 @@ router.get('/:filename', async (req, res) => {
     return res.status(404).json({ error: 'File not found' });
   }
 
-  // Verify the authenticated user owns a mail item referencing this file
+  // Verify the authenticated user owns (or has shared access to) a mail item referencing this file
   const uploadPath = `/uploads/${safe}`;
   const ownerMail = await prisma.mail.findFirst({
     where: {
-      userId: req.user.id,
       OR: [
         { imageUrl: uploadPath },
-        // imageUrls is a Json array — use string_contains to match within the JSON
         { imageUrls: { string_contains: uploadPath } },
       ],
     },
-    select: { id: true },
+    select: { id: true, userId: true, category: true, source: true },
   });
 
   if (!ownerMail) {
-    return res.status(403).json({ error: 'Access denied' });
+    return res.status(404).json({ error: 'File not found' });
   }
 
-  res.sendFile(filePath);
+  // Owner can always access
+  if (ownerMail.userId === req.user.id) {
+    return res.sendFile(filePath);
+  }
+
+  // Check sharing access: explicit per-item share
+  const explicitShare = await prisma.mailShare.findFirst({
+    where: { mailId: ownerMail.id, sharedWithUserId: req.user.id },
+  });
+  if (explicitShare) {
+    return res.sendFile(filePath);
+  }
+
+  // Check sharing access: category auto-share
+  const conn = await prisma.shareConnection.findFirst({
+    where: { fromUserId: ownerMail.userId, toUserId: req.user.id, status: 'accepted' },
+  });
+  const cats = conn?.sharedCategories;
+  if (conn && Array.isArray(cats) && cats.includes(ownerMail.category) && ownerMail.source === 'scan') {
+    return res.sendFile(filePath);
+  }
+
+  return res.status(403).json({ error: 'Access denied' });
 });
 
 export { router as uploadsRouter };

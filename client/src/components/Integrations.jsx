@@ -1,5 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Mail, RefreshCw, Unlink, CheckCircle, XCircle, Loader2, ExternalLink } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Mail, RefreshCw, Unlink, CheckCircle, XCircle, Loader2, ExternalLink, Users, UserPlus, X, Tag } from 'lucide-react';
+import {
+  getSharingConnections, getPendingInvites, sendSharingInvite,
+  acceptInvite, rejectInvite, removeConnection, updateSharedCategories,
+} from '../services/api';
 
 async function fetchGmailStatus() {
   const res = await fetch('/api/gmail/status', { credentials: 'include' });
@@ -19,69 +23,128 @@ async function disconnectGmail() {
   if (!res.ok) throw new Error('Disconnect failed');
 }
 
+const SHARE_CATEGORIES = ['bill', 'government', 'legal', 'medical', 'insurance', 'financial', 'tax', 'personal', 'subscription', 'other'];
+
 export default function Integrations() {
-  const [gmail, setGmail] = useState(null);   // { connected, email }
+  // ── Gmail state ────────────────────────────────────────────────────────────
+  const [gmail, setGmail]               = useState(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState(null);  // { processed, found }
-  const [error, setError] = useState(null);
+  const [syncing, setSyncing]           = useState(false);
+  const [syncResult, setSyncResult]     = useState(null);
+  const [gmailError, setGmailError]     = useState(null);
   const [disconnecting, setDisconnecting] = useState(false);
 
+  // ── Sharing state ──────────────────────────────────────────────────────────
+  const [sharingLoading, setSharingLoading] = useState(true);
+  const [sentConns, setSentConns]       = useState([]);   // connections I initiated
+  const [receivedConns, setReceivedConns] = useState([]); // connections others initiated (accepted)
+  const [pendingInvites, setPendingInvites] = useState([]); // pending invites sent TO me
+  const [inviteEmail, setInviteEmail]   = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError]   = useState(null);
+  const [inviteSuccess, setInviteSuccess] = useState(null);
+  const [catUpdating, setCatUpdating]   = useState(null); // connectionId being updated
+  const inviteInputRef = useRef(null);
+
+  // ── Load Gmail status ──────────────────────────────────────────────────────
   useEffect(() => {
-    // Check for OAuth callback result in URL
     const params = new URLSearchParams(window.location.search);
     if (params.get('connected') === 'true') {
       setSyncResult(null);
       window.history.replaceState({}, '', '/integrations');
     }
     if (params.get('error')) {
-      setError(decodeURIComponent(params.get('error')));
+      setGmailError(decodeURIComponent(params.get('error')));
       window.history.replaceState({}, '', '/integrations');
     }
-
     fetchGmailStatus()
       .then(setGmail)
-      .catch(() => setError('Could not load Gmail status'))
+      .catch(() => setGmailError('Could not load Gmail status'))
       .finally(() => setLoadingStatus(false));
   }, []);
 
-  async function handleSync() {
-    setSyncing(true);
-    setSyncResult(null);
-    setError(null);
+  // ── Load sharing data ──────────────────────────────────────────────────────
+  async function loadSharing() {
+    setSharingLoading(true);
     try {
-      const result = await syncGmail();
-      setSyncResult(result);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSyncing(false);
-    }
+      const [conns, invites] = await Promise.all([getSharingConnections(), getPendingInvites()]);
+      setSentConns(conns.sent || []);
+      setReceivedConns(conns.received || []);
+      setPendingInvites(invites || []);
+    } catch { /* ignore */ }
+    setSharingLoading(false);
+  }
+  useEffect(() => { loadSharing(); }, []);
+
+  // ── Gmail handlers ─────────────────────────────────────────────────────────
+  async function handleSync() {
+    setSyncing(true); setSyncResult(null); setGmailError(null);
+    try { setSyncResult(await syncGmail()); }
+    catch (err) { setGmailError(err.message); }
+    finally { setSyncing(false); }
   }
 
-  async function handleDisconnect() {
-    setDisconnecting(true);
-    setError(null);
+  async function handleGmailDisconnect() {
+    setDisconnecting(true); setGmailError(null);
+    try { await disconnectGmail(); setGmail({ connected: false, email: null }); setSyncResult(null); }
+    catch (err) { setGmailError(err.message); }
+    finally { setDisconnecting(false); }
+  }
+
+  // ── Sharing handlers ───────────────────────────────────────────────────────
+  async function handleInvite(e) {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+    setInviteLoading(true); setInviteError(null); setInviteSuccess(null);
     try {
-      await disconnectGmail();
-      setGmail({ connected: false, email: null });
-      setSyncResult(null);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setDisconnecting(false);
-    }
+      const result = await sendSharingInvite(inviteEmail.trim());
+      setInviteEmail('');
+      setInviteSuccess(result.autoAccepted
+        ? `Connected with ${result.connection?.toUser?.name || result.reverse?.fromUser?.name || inviteEmail}! Both of you can now manage what you share.`
+        : `Invite sent to ${inviteEmail.trim()}.`);
+      await loadSharing();
+    } catch (err) { setInviteError(err.message); }
+    finally { setInviteLoading(false); }
+  }
+
+  async function handleAcceptInvite(id) {
+    try { await acceptInvite(id); await loadSharing(); }
+    catch (err) { setInviteError(err.message); }
+  }
+
+  async function handleRejectInvite(id) {
+    try { await rejectInvite(id); await loadSharing(); }
+    catch (err) { setInviteError(err.message); }
+  }
+
+  async function handleDisconnectSharing(id) {
+    if (!confirm('Remove this sharing connection?')) return;
+    try { await removeConnection(id); await loadSharing(); }
+    catch (err) { setInviteError(err.message); }
+  }
+
+  async function handleCategoryToggle(connectionId, category, currentCategories) {
+    setCatUpdating(connectionId);
+    const updated = currentCategories.includes(category)
+      ? currentCategories.filter((c) => c !== category)
+      : [...currentCategories, category];
+    try {
+      const res = await updateSharedCategories(connectionId, updated);
+      setSentConns((prev) => prev.map((c) => c.id === connectionId
+        ? { ...c, sharedCategories: res.sharedCategories }
+        : c));
+    } catch (err) { setInviteError(err.message); }
+    finally { setCatUpdating(null); }
   }
 
   return (
     <div className="integrations-page">
-      <h2 className="integrations-title">Integrations</h2>
+      <h2 className="integrations-title">Integrations & Sharing</h2>
 
+      {/* ── Gmail ─────────────────────────────────────────────────────────── */}
       <div className="integration-card">
         <div className="integration-header">
-          <div className="integration-icon gmail-icon">
-            <Mail size={24} />
-          </div>
+          <div className="integration-icon gmail-icon"><Mail size={24} /></div>
           <div className="integration-info">
             <h3>Gmail</h3>
             <p>Sync actionable emails — invoices, bills, reminders, and letters with attachments — directly into your Robin inbox.</p>
@@ -89,16 +152,13 @@ export default function Integrations() {
         </div>
 
         {loadingStatus ? (
-          <div className="integration-loading">
-            <Loader2 size={18} className="spin" /> Loading…
-          </div>
+          <div className="integration-loading"><Loader2 size={18} className="spin" /> Loading…</div>
         ) : gmail?.connected ? (
           <>
             <div className="integration-status connected">
               <CheckCircle size={16} />
               <span>Connected as <strong>{gmail.email}</strong></span>
             </div>
-
             <div className="integration-how">
               <h4>How it works</h4>
               <ul>
@@ -109,7 +169,6 @@ export default function Integrations() {
                 <li>Results appear in your Dashboard alongside scanned mail</li>
               </ul>
             </div>
-
             {syncResult && (
               <div className="sync-result">
                 <CheckCircle size={16} />
@@ -123,51 +182,20 @@ export default function Integrations() {
                 </span>
               </div>
             )}
-
-            {error && (
-              <div className="error-message">
-                <XCircle size={16} /> {error}
-              </div>
-            )}
-
+            {gmailError && <div className="error-message"><XCircle size={16} /> {gmailError}</div>}
             <div className="integration-actions">
-              <button
-                className="btn btn-primary"
-                onClick={handleSync}
-                disabled={syncing}
-              >
-                {syncing ? (
-                  <><Loader2 size={16} className="spin" /> Syncing…</>
-                ) : (
-                  <><RefreshCw size={16} /> Sync Now</>
-                )}
+              <button className="btn btn-primary" onClick={handleSync} disabled={syncing}>
+                {syncing ? <><Loader2 size={16} className="spin" /> Syncing…</> : <><RefreshCw size={16} /> Sync Now</>}
               </button>
-              <button
-                className="btn btn-ghost disconnect-btn"
-                onClick={handleDisconnect}
-                disabled={disconnecting}
-              >
-                {disconnecting ? (
-                  <><Loader2 size={16} className="spin" /> Disconnecting…</>
-                ) : (
-                  <><Unlink size={16} /> Disconnect</>
-                )}
+              <button className="btn btn-ghost disconnect-btn" onClick={handleGmailDisconnect} disabled={disconnecting}>
+                {disconnecting ? <><Loader2 size={16} className="spin" /> Disconnecting…</> : <><Unlink size={16} /> Disconnect</>}
               </button>
             </div>
           </>
         ) : (
           <>
-            <div className="integration-status disconnected">
-              <XCircle size={16} />
-              <span>Not connected</span>
-            </div>
-
-            {error && (
-              <div className="error-message">
-                <XCircle size={16} /> {error}
-              </div>
-            )}
-
+            <div className="integration-status disconnected"><XCircle size={16} /><span>Not connected</span></div>
+            {gmailError && <div className="error-message"><XCircle size={16} /> {gmailError}</div>}
             <div className="integration-how">
               <h4>What you'll need</h4>
               <ul>
@@ -175,11 +203,144 @@ export default function Integrations() {
                 <li>Robin will only request <strong>read-only</strong> access — it cannot send or delete emails</li>
               </ul>
             </div>
-
             <div className="integration-actions">
-              <a href="/api/gmail/auth" className="btn btn-primary">
-                <ExternalLink size={16} /> Connect Gmail
-              </a>
+              <a href="/api/gmail/auth" className="btn btn-primary"><ExternalLink size={16} /> Connect Gmail</a>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ── Sharing ───────────────────────────────────────────────────────── */}
+      <div className="integration-card">
+        <div className="integration-header">
+          <div className="integration-icon sharing-icon"><Users size={24} /></div>
+          <div className="integration-info">
+            <h3>Dashboard Sharing</h3>
+            <p>Share your mail with a partner, family member, or flatmate. They get a read-only view of what you choose to share.</p>
+          </div>
+        </div>
+
+        {sharingLoading ? (
+          <div className="integration-loading"><Loader2 size={18} className="spin" /> Loading…</div>
+        ) : (
+          <>
+            {/* Pending invites received */}
+            {pendingInvites.length > 0 && (
+              <div className="sharing-section">
+                <h4 className="sharing-section-title">Pending invites</h4>
+                {pendingInvites.map((inv) => (
+                  <div key={inv.id} className="sharing-invite-row">
+                    <div className="sharing-user">
+                      <strong>{inv.fromUser.name}</strong>
+                      <span>{inv.fromUser.email}</span>
+                    </div>
+                    <div className="sharing-invite-actions">
+                      <button className="btn btn-sm btn-primary" onClick={() => handleAcceptInvite(inv.id)}>Accept</button>
+                      <button className="btn btn-sm btn-ghost" onClick={() => handleRejectInvite(inv.id)}>Decline</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Connections I'm sharing TO (I invited them) */}
+            {sentConns.filter((c) => c.status === 'accepted').length > 0 && (
+              <div className="sharing-section">
+                <h4 className="sharing-section-title">
+                  <Tag size={14} /> You are sharing with
+                </h4>
+                {sentConns.filter((c) => c.status === 'accepted').map((conn) => {
+                  const cats = conn.sharedCategories || [];
+                  const isUpdating = catUpdating === conn.id;
+                  return (
+                    <div key={conn.id} className="sharing-conn-card">
+                      <div className="sharing-conn-header">
+                        <div className="sharing-user">
+                          <strong>{conn.toUser.name}</strong>
+                          <span>{conn.toUser.email}</span>
+                        </div>
+                        <button className="btn-icon-sm" onClick={() => handleDisconnectSharing(conn.id)} title="Remove connection">
+                          <X size={16} />
+                        </button>
+                      </div>
+                      <div className="sharing-cats-label">Auto-share categories:</div>
+                      <div className="sharing-cats">
+                        {SHARE_CATEGORIES.map((cat) => (
+                          <button
+                            key={cat}
+                            className={`cat-chip ${cats.includes(cat) ? 'active' : ''}`}
+                            onClick={() => handleCategoryToggle(conn.id, cat, cats)}
+                            disabled={isUpdating}
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="sharing-cats-hint">
+                        {cats.length === 0
+                          ? 'No categories auto-shared — use the share button on individual mail items.'
+                          : `Auto-sharing: ${cats.join(', ')}. You can also share individual items manually.`}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Pending invites I sent */}
+            {sentConns.filter((c) => c.status === 'pending').length > 0 && (
+              <div className="sharing-section">
+                <h4 className="sharing-section-title">Pending (awaiting response)</h4>
+                {sentConns.filter((c) => c.status === 'pending').map((conn) => (
+                  <div key={conn.id} className="sharing-invite-row">
+                    <div className="sharing-user">
+                      <strong>{conn.toUser.name}</strong>
+                      <span>{conn.toUser.email}</span>
+                    </div>
+                    <button className="btn btn-sm btn-ghost" onClick={() => handleDisconnectSharing(conn.id)}>Cancel</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Connections sharing TO me */}
+            {receivedConns.length > 0 && (
+              <div className="sharing-section">
+                <h4 className="sharing-section-title">Shared with you by</h4>
+                {receivedConns.map((conn) => (
+                  <div key={conn.id} className="sharing-invite-row">
+                    <div className="sharing-user">
+                      <strong>{conn.fromUser.name}</strong>
+                      <span>{conn.fromUser.email}</span>
+                    </div>
+                    <button className="btn btn-sm btn-ghost disconnect-btn" onClick={() => handleDisconnectSharing(conn.id)}>
+                      <Unlink size={14} /> Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {inviteError && <div className="error-message"><XCircle size={16} /> {inviteError}</div>}
+            {inviteSuccess && <div className="sync-result"><CheckCircle size={16} /> {inviteSuccess}</div>}
+
+            {/* Invite form */}
+            <div className="sharing-section">
+              <h4 className="sharing-section-title">Invite someone</h4>
+              <form className="sharing-invite-form" onSubmit={handleInvite}>
+                <input
+                  ref={inviteInputRef}
+                  type="email"
+                  placeholder="their@email.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  required
+                />
+                <button type="submit" className="btn btn-primary" disabled={inviteLoading}>
+                  {inviteLoading ? <><Loader2 size={16} className="spin" /> Sending…</> : <><UserPlus size={16} /> Send Invite</>}
+                </button>
+              </form>
+              <p className="sharing-cats-hint">They need a Robin account. Once accepted, you'll each control what you share.</p>
             </div>
           </>
         )}

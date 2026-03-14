@@ -11,7 +11,8 @@ const ACTION_CONFIG = {
   mark_important: { label: 'Important', icon: Star, color: 'yellow' },
 };
 
-export default function ActionPanel({ item, onUpdate }) {
+export default function ActionPanel({ item, onUpdate, hidden = false }) {
+  if (hidden) return null;
   const [acting, setActing] = useState(null);
   const [note, setNote] = useState('');
   const [showNote, setShowNote] = useState(false);

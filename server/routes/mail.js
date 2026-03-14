@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuid } from 'uuid';
+import prisma from '../services/db.js';
 import { analyzeMail, findRelatedMail } from '../services/ai.js';
 import { getAllMail, getMailById, saveMail, updateMail, deleteMail, getRelatedMail, searchMail, getContacts, getMailByContact, getDueReminders } from '../services/storage.js';
 import { authenticate } from '../middleware/auth.js';
@@ -197,12 +198,48 @@ router.get('/reminders/due', async (req, res) => {
 });
 
 // GET /api/mail/:id — get single mail item (with related mail)
+// Also allows read-only access if the item is shared with the requesting user
 router.get('/:id', async (req, res) => {
-  const item = await getMailById(req.params.id, req.user.id);
-  if (!item) return res.status(404).json({ error: 'Mail not found' });
+  let item = await getMailById(req.params.id, req.user.id);
+  let readOnly = false;
+  let sharedByUser = null;
 
-  const relatedMail = await getRelatedMail(item.threadId, item.id, req.user.id);
-  res.json({ ...item, relatedMail });
+  if (!item) {
+    // Not the owner — check sharing access
+    const mail = await prisma.mail.findUnique({ where: { id: req.params.id } });
+    if (!mail) return res.status(404).json({ error: 'Mail not found' });
+
+    // Check explicit per-item share
+    const explicitShare = await prisma.mailShare.findFirst({
+      where: { mailId: req.params.id, sharedWithUserId: req.user.id },
+      include: { mail: { select: { userId: true } } },
+    });
+
+    // Check category auto-share
+    let hasAccess = !!explicitShare;
+    if (!hasAccess) {
+      const conn = await prisma.shareConnection.findFirst({
+        where: { fromUserId: mail.userId, toUserId: req.user.id, status: 'accepted' },
+      });
+      const cats = conn?.sharedCategories;
+      if (conn && Array.isArray(cats) && cats.includes(mail.category) && mail.source === 'scan') {
+        hasAccess = true;
+      }
+    }
+
+    if (!hasAccess) return res.status(404).json({ error: 'Mail not found' });
+
+    // Load the sharedBy user info
+    sharedByUser = await prisma.user.findUnique({
+      where: { id: mail.userId },
+      select: { id: true, name: true, email: true },
+    });
+    item = mail;
+    readOnly = true;
+  }
+
+  const relatedMail = readOnly ? [] : await getRelatedMail(item.threadId, item.id, req.user.id);
+  res.json({ ...item, relatedMail, readOnly, sharedBy: sharedByUser });
 });
 
 // PATCH /api/mail/:id/action — perform an action on mail
