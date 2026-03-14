@@ -9,6 +9,16 @@ import Directory from './components/Directory';
 import ContactDetail from './components/ContactDetail';
 import AuthPage from './components/AuthPage';
 
+function NotFound() {
+  return (
+    <div className="empty-state">
+      <h3>Page not found</h3>
+      <p>The page you're looking for doesn't exist.</p>
+      <a href="/" className="btn btn-primary">Go to Dashboard</a>
+    </div>
+  );
+}
+
 function AppRoutes() {
   const { isAuthenticated, loading } = useAuth();
 
@@ -29,6 +39,7 @@ function AppRoutes() {
         <Route path="/directory" element={<Directory />} />
         <Route path="/directory/:name" element={<ContactDetail />} />
         <Route path="/mail/:id" element={<MailDetail />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>
   );

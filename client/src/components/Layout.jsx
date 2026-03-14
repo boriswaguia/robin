@@ -26,11 +26,7 @@ export default function Layout({ children }) {
       <nav className="bottom-nav">
         <Link to="/" className={`nav-item ${pathname === '/' ? 'active' : ''}`}>
           <Home size={22} />
-          <span>Mail</span>
-        </Link>
-        <Link to="/directory" className={`nav-item ${pathname.startsWith('/directory') ? 'active' : ''}`}>
-          <BookUser size={22} />
-          <span>Directory</span>
+          <span>Dashboard</span>
         </Link>
         <Link to="/scan" className={`nav-item scan-btn ${pathname === '/scan' ? 'active' : ''}`}>
           <ScanLine size={26} />
@@ -39,6 +35,10 @@ export default function Layout({ children }) {
         <Link to="/calendar" className={`nav-item ${pathname === '/calendar' ? 'active' : ''}`}>
           <CalendarDays size={22} />
           <span>Calendar</span>
+        </Link>
+        <Link to="/directory" className={`nav-item ${pathname.startsWith('/directory') ? 'active' : ''}`}>
+          <BookUser size={22} />
+          <span>Directory</span>
         </Link>
       </nav>
     </div>

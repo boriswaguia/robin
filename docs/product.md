@@ -23,11 +23,8 @@ Physical mail is tedious. Most people let it accumulate because:
 ### 1. Scan
 Upload a photo or use your phone's camera to capture a piece of mail. Robin accepts images from any source — camera roll, file picker, or direct camera capture.
 
-### 2. Read
-Google Cloud Vision OCR extracts all text from the image, including handwritten annotations, stamps, and small print.
-
-### 3. Understand
-OpenAI GPT-4o-mini reads the extracted text and produces:
+### 2. Read & Understand
+Google Gemini (`gemini-3.1-pro-preview`) reads the document image directly — performing OCR and analysis in a single multimodal call. It produces:
 - A **one-sentence summary** of what the letter is about
 - The identified **sender** (person or organisation)
 - A **category** from a fixed taxonomy
@@ -35,7 +32,7 @@ OpenAI GPT-4o-mini reads the extracted text and produces:
 - Any **amount due** and **due date** found in the text
 - A list of **key details** extracted as bullet points
 
-### 4. Suggest
+### 3. Suggest
 Robin recommends the most appropriate next actions based on the content of the letter:
 
 | Action | When suggested |
@@ -47,7 +44,7 @@ Robin recommends the most appropriate next actions based on the content of the l
 | **Mark as Important** | Legal, government, medical notices |
 | **Discard** | Advertisements, junk mail |
 
-### 5. Record
+### 4. Record
 Every piece of scanned mail is stored with its image, extracted text, analysis, and the action you took. Your inbox is searchable and filterable.
 
 ---
@@ -88,8 +85,7 @@ Each user has their own account with a private mail inbox. Mail scanned on one a
 | Frontend | React 18, Vite, React Router |
 | Backend | Node.js, Express.js |
 | Database | PostgreSQL 16 (via Prisma ORM) |
-| OCR | Google Cloud Vision API |
-| AI | OpenAI GPT-4o-mini |
+| OCR + AI | Google Gemini (multimodal, single-call OCR + analysis) |
 | Auth | JSON Web Tokens + bcrypt |
 | Containerisation | Docker + Docker Compose |
 | Reverse proxy | Nginx |

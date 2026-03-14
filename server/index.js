@@ -7,6 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { authRouter } from './routes/auth.js';
 import { mailRouter } from './routes/mail.js';
+import { uploadsRouter } from './routes/uploads.js';
 import { ensureDirs } from './services/storage.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 
@@ -62,8 +63,8 @@ app.use(cookieParser());
 // ── General rate limit ────────────────────────────────────────────────────────
 app.use('/api/', apiLimiter);
 
-// ── Static: uploaded images ──────────────────────────────────────────────────
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// ── Uploaded files (authenticated) ────────────────────────────────────────
+app.use('/uploads', uploadsRouter);
 
 // ── API routes ────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRouter);

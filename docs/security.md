@@ -108,7 +108,7 @@ Every database query for mail includes a `userId` condition tied to the authenti
 
 **Threat blocked:** Malicious websites making credentialed requests to the API.
 
-CORS is configured to only allow requests from known origins (`localhost:5173` in development, `CLIENT_ORIGIN` env var in production). Credentials (cookies) are only sent to these origins.
+In **development**, CORS is configured to only allow requests from known local origins (`localhost:5173`, `localhost:80`, `localhost`). In **production**, the Express server is never publicly exposed — it sits behind an nginx reverse proxy that owns the only external port (80/443). Since the browser only ever talks to one origin (nginx), CORS restrictions are not needed and the server reflects the request origin. Credentials (cookies) require `credentials: true`.
 
 ---
 
@@ -152,31 +152,9 @@ Once HTTPS is in place, set `NODE_ENV=production` and the cookie's `Secure` flag
 
 ---
 
-### Set `CLIENT_ORIGIN` in Production
-
-Update your `.env` before deploying:
-```
-CLIENT_ORIGIN=https://yourdomain.com
-```
-
-This locks CORS to your real domain instead of localhost.
-
----
-
 ### Uploaded File Access Controls
 
-Currently, uploaded mail images are served as public static files under `/uploads/`. Anyone who guesses a filename can view the image without authenticating.
-
-To fix this, route image requests through the API and add authentication:
-
-```js
-// server/routes/uploads.js
-router.get('/:filename', authenticate, (req, res) => {
-  const file = path.join(uploadsDir, req.params.filename);
-  // Verify ownership via DB before serving
-  res.sendFile(file);
-});
-```
+Uploaded mail images are served through an authenticated route (`server/routes/uploads.js`). Every request to `/uploads/:filename` requires a valid session and verifies that the authenticated user owns a mail item referencing the file. Unauthenticated or unauthorised access returns 403.
 
 ---
 
@@ -212,10 +190,10 @@ npm audit --audit-level=high
 | Bcrypt passwords | ✅ Done | Cost factor 12 |
 | Timing-safe login | ✅ Done | Always run bcrypt |
 | Per-user data isolation | ✅ Done | userId on all queries |
-| CORS lockdown | ✅ Done | Allowlist-based |
+| CORS policy | ✅ Done | Allowlist in dev; server not exposed in prod |
 | DB not exposed to host | ✅ Done | Docker internal network |
 | Parameterised queries | ✅ Done | Prisma ORM |
 | HTTPS / TLS | ⚠️ Required | Add before going live |
-| Uploaded file auth | ⚠️ Recommended | Files currently public |
+| Uploaded file auth | ✅ Done | Authenticated + ownership verified |
 | Token rotation | ⚠️ Optional | Add for high-security use |
 | Audit logging | ⚠️ Optional | Add for compliance |
