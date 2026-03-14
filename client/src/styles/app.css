@@ -78,6 +78,141 @@ ul { list-style: none; }
   background: rgba(239,68,68,0.1);
 }
 
+.header-icon-btn {
+  color: var(--text-muted);
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  transition: color 0.15s, background 0.15s;
+}
+.header-icon-btn:hover {
+  color: var(--accent);
+  background: rgba(99,102,241,0.1);
+}
+
+/* ── Source badge ─────────────────────────────────────────────────────────── */
+.source-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.source-badge.gmail {
+  background: #fce8e6;
+  color: #c5221f;
+}
+
+/* ── Integrations page ────────────────────────────────────────────────────── */
+.integrations-page {
+  padding: 4px 0;
+}
+.integrations-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+.integration-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.integration-header {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.integration-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.integration-icon.gmail-icon {
+  background: #fce8e6;
+  color: #c5221f;
+}
+.integration-info h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.integration-info p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.integration-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+}
+.integration-status.connected {
+  background: rgba(34,197,94,0.1);
+  color: #16a34a;
+}
+.integration-status.disconnected {
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+}
+.integration-how h4 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.integration-how ul {
+  list-style: disc;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.integration-how li {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.integration-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.disconnect-btn {
+  color: var(--danger) !important;
+}
+.sync-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(34,197,94,0.1);
+  color: #16a34a;
+}
+.integration-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
 .main {
   flex: 1;
   padding: 12px 16px 100px;

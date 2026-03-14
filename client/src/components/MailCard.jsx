@@ -57,6 +57,7 @@ export default function MailCard({ item }) {
         <span className={`category-badge ${getCategoryColor(item.category)}`}>
           {getCategoryIcon(item.category)} {item.category}
         </span>
+        {item.source === 'gmail' && <span className="source-badge gmail">Gmail</span>}
         {item.urgency === 'high' && <span className="urgency-badge">Urgent</span>}
         {item.status !== 'new' && <span className="status-badge">{item.actionTaken?.replace('_', ' ') || item.status}</span>}
       </div>

@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { authRouter } from './routes/auth.js';
 import { mailRouter } from './routes/mail.js';
 import { uploadsRouter } from './routes/uploads.js';
+import { gmailRouter } from './routes/gmail.js';
 import { ensureDirs } from './services/storage.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 
@@ -69,6 +70,7 @@ app.use('/uploads', uploadsRouter);
 // ── API routes ────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRouter);
 app.use('/api/mail', mailRouter);
+app.use('/api/gmail', gmailRouter);
 
 // In production, serve the React build
 const clientDist = path.join(__dirname, '..', 'client', 'dist');

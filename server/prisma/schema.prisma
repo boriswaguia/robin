@@ -8,20 +8,23 @@ generator client {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  mail      Mail[]
+  id                String   @id @default(uuid())
+  email             String   @unique
+  name              String
+  password          String
+  gmailAccessToken  String?
+  gmailRefreshToken String?
+  gmailEmail        String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  mail              Mail[]
 }
 
 model Mail {
   id             String   @id @default(uuid())
   userId         String
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  imageUrl       String
+  imageUrl       String?  // null for text-only Gmail emails
   imageUrls      Json?    // Array of image URLs for multi-page documents
   extractedText  String?
   summary        String?
@@ -41,6 +44,8 @@ model Mail {
   status         String   @default("new")
   actionTaken    String?
   actionNote     String?
+  source         String   @default("scan") // 'scan' | 'gmail'
+  gmailMessageId String?  // prevents duplicate imports
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -51,4 +56,5 @@ model Mail {
   @@index([userId, sender])
   @@index([userId, receiver])
   @@index([reminderAt, reminderSent])
+  @@unique([userId, gmailMessageId])
 }

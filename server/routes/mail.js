@@ -1,5 +1,6 @@
 import express from 'express';
 import multer from 'multer';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuid } from 'uuid';
@@ -225,8 +226,19 @@ router.patch('/:id/action', async (req, res) => {
 
 // DELETE /api/mail/:id
 router.delete('/:id', async (req, res) => {
-  const result = await deleteMail(req.params.id, req.user.id);
-  if (!result) return res.status(404).json({ error: 'Mail not found' });
+  const item = await getMailById(req.params.id, req.user.id);
+  if (!item) return res.status(404).json({ error: 'Mail not found' });
+
+  // Clean up uploaded files from disk
+  const filesToDelete = item.imageUrls || (item.imageUrl ? [item.imageUrl] : []);
+  for (const relPath of filesToDelete) {
+    try {
+      const absPath = path.join(__dirname, '..', relPath);
+      if (fs.existsSync(absPath)) fs.unlinkSync(absPath);
+    } catch { /* best-effort cleanup */ }
+  }
+
+  await deleteMail(req.params.id, req.user.id);
   res.json({ success: true });
 });
 

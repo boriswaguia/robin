@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Mail, ScanLine, Home, LogOut, CalendarDays, BookUser } from 'lucide-react';
+import { Mail, ScanLine, Home, LogOut, CalendarDays, BookUser, Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Layout({ children }) {
@@ -15,6 +15,9 @@ export default function Layout({ children }) {
         </Link>
         <div className="header-right">
           <span className="user-name">{user?.name}</span>
+          <Link to="/integrations" className="header-icon-btn" title="Integrations">
+            <Settings size={18} />
+          </Link>
           <button className="logout-btn" onClick={logout} title="Sign out">
             <LogOut size={18} />
           </button>

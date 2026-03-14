@@ -8,6 +8,7 @@ import Calendar from './components/Calendar';
 import Directory from './components/Directory';
 import ContactDetail from './components/ContactDetail';
 import AuthPage from './components/AuthPage';
+import Integrations from './components/Integrations';
 
 function NotFound() {
   return (
@@ -39,6 +40,7 @@ function AppRoutes() {
         <Route path="/directory" element={<Directory />} />
         <Route path="/directory/:name" element={<ContactDetail />} />
         <Route path="/mail/:id" element={<MailDetail />} />
+        <Route path="/integrations" element={<Integrations />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>

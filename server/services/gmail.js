@@ -1,0 +1,312 @@
+import { google } from 'googleapis';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { v4 as uuid } from 'uuid';
+import prisma from './db.js';
+import { analyzeMail, analyzeEmailText, findRelatedMail } from './ai.js';
+import { saveMail, updateMail, getAllMail } from './storage.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
+
+// ── OAuth2 helpers ──────────────────────────────────────────────────────────
+
+function createOAuth2Client() {
+  return new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    process.env.GOOGLE_REDIRECT_URI,
+  );
+}
+
+export function getAuthUrl() {
+  const client = createOAuth2Client();
+  return client.generateAuthUrl({
+    access_type: 'offline',
+    scope: [
+      'https://www.googleapis.com/auth/gmail.readonly',
+      'https://www.googleapis.com/auth/userinfo.email',
+    ],
+    prompt: 'consent', // always return a refresh token
+  });
+}
+
+export async function exchangeCode(code) {
+  const client = createOAuth2Client();
+  const { tokens } = await client.getToken(code);
+  return tokens;
+}
+
+async function getGmailClient(user) {
+  const client = createOAuth2Client();
+  client.setCredentials({
+    access_token: user.gmailAccessToken,
+    refresh_token: user.gmailRefreshToken,
+  });
+
+  // Persist refreshed access token automatically
+  client.on('tokens', async (tokens) => {
+    if (tokens.access_token) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { gmailAccessToken: tokens.access_token },
+      });
+    }
+  });
+
+  return google.gmail({ version: 'v1', auth: client });
+}
+
+// ── Tier 1: rule-based filter (free, <1ms) ──────────────────────────────────
+
+function passesTier1(message) {
+  const headers = message.payload?.headers || [];
+  const h = (name) => headers.find((x) => x.name.toLowerCase() === name.toLowerCase())?.value || '';
+
+  // Marketing/newsletter signal
+  if (h('List-Unsubscribe')) return false;
+  if (h('List-Id')) return false;
+  if (h('Precedence').toLowerCase() === 'bulk') return false;
+
+  // Gmail category labels
+  const labels = message.labelIds || [];
+  if (labels.includes('CATEGORY_PROMOTIONS')) return false;
+  if (labels.includes('CATEGORY_SOCIAL')) return false;
+  if (labels.includes('CATEGORY_FORUMS')) return false;
+
+  return true;
+}
+
+// ── Tier 2: Gemini Flash pre-filter (~100 tokens, ~$0.00001/email) ──────────
+
+async function passesTier2(subject, sender, snippet) {
+  try {
+    const { GoogleGenerativeAI } = await import('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+    const prompt = `You are an email triage assistant. Does this email require the recipient to take action (pay a bill, respond, attend an appointment, upload a document, deal with a legal/financial/government/medical matter, or handle anything with a deadline)?
+
+Sender: ${sender}
+Subject: ${subject}
+Preview: ${snippet}
+
+Answer ONLY "yes" or "no".`;
+
+    const result = await model.generateContent(prompt);
+    return result.response.text().trim().toLowerCase().startsWith('yes');
+  } catch {
+    return true; // fail open — let the full analysis decide
+  }
+}
+
+// ── Recursive MIME part extractor ───────────────────────────────────────────
+
+async function extractParts(gmail, messageId, part, attachmentPaths, textChunks) {
+  if (!part) return;
+
+  if (part.parts) {
+    for (const p of part.parts) {
+      await extractParts(gmail, messageId, p, attachmentPaths, textChunks);
+    }
+    return;
+  }
+
+  const mime = part.mimeType || '';
+
+  // Plain-text body (prefer plain over HTML)
+  if (mime === 'text/plain' && part.body?.data) {
+    textChunks.push(Buffer.from(part.body.data, 'base64').toString('utf-8'));
+    return;
+  }
+
+  // HTML body — strip tags as fallback when no text/plain is available
+  if (mime === 'text/html' && part.body?.data) {
+    const html = Buffer.from(part.body.data, 'base64').toString('utf-8');
+    const text = html
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<\/div>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&#\d+;/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+    if (text) textChunks.push(text);
+    return;
+  }
+
+  // PDF or image attachment
+  const isImage = /^image\//.test(mime);
+  const isPdf = mime === 'application/pdf';
+  if (part.filename && part.body?.attachmentId && (isImage || isPdf)) {
+    const attRes = await gmail.users.messages.attachments.get({
+      userId: 'me',
+      messageId,
+      id: part.body.attachmentId,
+    });
+
+    const ext = path.extname(part.filename) || (isPdf ? '.pdf' : '.jpg');
+    const filename = `${uuid()}${ext}`;
+    const filePath = path.join(UPLOADS_DIR, filename);
+    fs.writeFileSync(filePath, Buffer.from(attRes.data.data, 'base64'));
+    attachmentPaths.push(filePath);
+  }
+}
+
+// ── Background analysis (mirrors processMailAsync in mail routes) ────────────
+
+async function analyzeGmailItem(mailId, userId, attachmentPaths, emailBody, subject, sender) {
+  try {
+    let analysis;
+
+    if (attachmentPaths.length > 0) {
+      // Use image/PDF pipeline — same as camera scan
+      analysis = await analyzeMail(attachmentPaths);
+    } else {
+      // Text-only email — pass body + metadata directly to Gemini
+      analysis = await analyzeEmailText(emailBody, subject, sender);
+    }
+
+    // Auto-reminder: 2 days before due date
+    let reminderAt = null;
+    if (analysis.dueDate) {
+      try {
+        const due = new Date(analysis.dueDate);
+        const reminder = new Date(due.getTime() - 2 * 24 * 60 * 60 * 1000);
+        reminderAt = reminder > new Date() ? reminder : due > new Date() ? new Date() : null;
+      } catch { /* invalid date */ }
+    }
+
+    // Thread detection
+    let threadId = mailId;
+    try {
+      const existing = await getAllMail(userId);
+      const candidates = existing.filter((m) => m.id !== mailId && m.status !== 'processing');
+      const matchedId = await findRelatedMail(analysis, candidates);
+      if (matchedId) {
+        const matched = candidates.find((m) => m.id === matchedId);
+        if (matched) threadId = matched.threadId || matched.id;
+      }
+    } catch { /* non-fatal */ }
+
+    await updateMail(mailId, userId, {
+      extractedText: analysis.extractedText || '',
+      summary: analysis.summary,
+      sender: analysis.sender || sender,
+      receiver: analysis.receiver || 'Unknown',
+      category: analysis.category,
+      urgency: analysis.urgency,
+      dueDate: analysis.dueDate || null,
+      amountDue: analysis.amountDue || null,
+      suggestedActions: analysis.suggestedActions || [],
+      keyDetails: analysis.keyDetails || [],
+      actionableInfo: analysis.actionableInfo || [],
+      threadId,
+      reminderAt,
+      status: 'new',
+    });
+
+    console.log(`Gmail item ${mailId} analyzed successfully`);
+  } catch (err) {
+    const isRejected = err.code === 'DOCUMENT_REJECTED';
+    await updateMail(mailId, userId, {
+      status: isRejected ? 'rejected' : 'error',
+      extractedText: `${isRejected ? 'Rejected' : 'Error'}: ${err.message}`,
+    }).catch(() => {});
+    throw err;
+  }
+}
+
+// ── Concurrency guard ────────────────────────────────────────────────────────
+
+const activeSyncs = new Set();
+
+// ── Main sync function ───────────────────────────────────────────────────────
+
+export async function syncGmail(userId) {
+  if (activeSyncs.has(userId)) throw new Error('Sync already in progress');
+  activeSyncs.add(userId);
+  try {
+    return await _doSync(userId);
+  } finally {
+    activeSyncs.delete(userId);
+  }
+}
+
+async function _doSync(userId) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user?.gmailRefreshToken) throw new Error('Gmail not connected');
+
+  const gmail = await getGmailClient(user);
+
+  // Last 7 days, inbox only
+  const sevenDaysAgo = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000);
+  const listRes = await gmail.users.messages.list({
+    userId: 'me',
+    q: `after:${sevenDaysAgo} in:inbox`,
+    maxResults: 50,
+  });
+
+  const messages = listRes.data.messages || [];
+  let scanned = 0;
+  let skipped = 0;
+  let found = 0;
+
+  for (const { id } of messages) {
+    try {
+      // Skip duplicates
+      const existing = await prisma.mail.findFirst({ where: { userId, gmailMessageId: id } });
+      if (existing) { skipped++; continue; }
+
+      // Fetch full message
+      const { data: msg } = await gmail.users.messages.get({ userId: 'me', id, format: 'full' });
+      scanned++;
+
+      // Tier 1
+      if (!passesTier1(msg)) continue;
+
+      const headers = msg.payload?.headers || [];
+      const h = (name) => headers.find((x) => x.name.toLowerCase() === name.toLowerCase())?.value || '';
+      const subject = h('Subject');
+      const sender = h('From');
+      const snippet = msg.snippet || '';
+
+      // Tier 2
+      if (!(await passesTier2(subject, sender, snippet))) continue;
+
+      found++;
+
+      // Extract body text and attachments
+      const attachmentPaths = [];
+      const textChunks = [];
+      await extractParts(gmail, id, msg.payload, attachmentPaths, textChunks);
+      const emailBody = textChunks.join('\n').slice(0, 8000); // cap at 8k chars
+
+      // Save placeholder immediately (polling will show it as processing)
+      const mailItem = await saveMail({
+        userId,
+        imageUrl: attachmentPaths.length > 0 ? `/uploads/${path.basename(attachmentPaths[0])}` : null,
+        imageUrls: attachmentPaths.map((p) => `/uploads/${path.basename(p)}`),
+        source: 'gmail',
+        gmailMessageId: id,
+        status: 'processing',
+      });
+
+      // Analyze in background — same pattern as camera scan
+      analyzeGmailItem(mailItem.id, userId, attachmentPaths, emailBody, subject, sender).catch((err) => {
+        console.error(`Background Gmail analysis failed for ${id}:`, err.message);
+      });
+    } catch (err) {
+      console.error(`Error processing Gmail message ${id}:`, err.message);
+    }
+  }
+
+  return { scanned, skipped, found };
+}
