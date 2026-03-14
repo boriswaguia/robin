@@ -22,33 +22,37 @@ export default function Dashboard() {
 
   // Fetch mail, and auto-refresh every 3 seconds while any item is still processing
   useEffect(() => {
-    let interval;
+    let mailInterval;
 
     function poll() {
       fetchMail()
-        .then(() => {
-          // re-read from state not possible here, so we check in the setter
-        })
         .finally(() => setLoading(false));
     }
 
     poll();
 
-    // Simple polling: check every 3s
-    interval = setInterval(() => {
+    // Poll mail every 3s only while something is still processing
+    mailInterval = setInterval(() => {
       setMail((prev) => {
         if (prev.some((m) => m.status === 'processing')) fetchMail();
         return prev;
       });
-      // Also check for due reminders
-      getDueReminders().then(setReminders).catch(() => {});
     }, 3000);
 
-    // Initial reminder check
-    getDueReminders().then(setReminders).catch(() => {});
-
-    return () => clearInterval(interval);
+    return () => clearInterval(mailInterval);
   }, [fetchMail]);
+
+  // Only poll for due reminders when at least one mail item actually has a reminder set
+  const hasPendingReminders = mail.some((m) => m.reminderAt && !m.reminderSent);
+
+  useEffect(() => {
+    if (!hasPendingReminders) return;
+    getDueReminders().then(setReminders).catch(() => {});
+    const reminderInterval = setInterval(() => {
+      getDueReminders().then(setReminders).catch(() => {});
+    }, 60_000);
+    return () => clearInterval(reminderInterval);
+  }, [hasPendingReminders]);
 
   async function handleSearch(e) {
     e.preventDefault();
