@@ -765,6 +765,13 @@ ul { list-style: none; }
 }
 .form-group input::placeholder { color: var(--text-muted); opacity: 0.6; }
 
+.password-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
 .auth-submit {
   width: 100%;
   justify-content: center;

@@ -103,9 +103,12 @@ export default function AuthPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              minLength={6}
+              minLength={8}
               required
             />
+            {mode === 'register' && (
+              <small className="password-hint">Must be at least 8 characters</small>
+            )}
           </div>
 
           {error && <div className="error-message">{error}</div>}
