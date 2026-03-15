@@ -101,6 +101,20 @@ async function processMailAsync(mailId, userId, imagePaths) {
       console.error('Mail matching error (non-fatal):', matchErr.message);
     }
 
+    // ── Infer due date for urgent items with no explicit date ──────────────
+    // Documents demanding immediate action (e.g. enforcement threats, overdue notices)
+    // often omit an explicit due date. If AI didn't set one, infer it so the item
+    // appears in the Agenda.
+    if (!analysis.dueDate && analysis.urgency === 'high') {
+      const actions = analysis.suggestedActions || [];
+      const needsAction = actions.includes('pay_bill') || actions.includes('schedule_followup');
+      if (needsAction) {
+        // Due today — the document demands immediate action
+        analysis.dueDate = new Date().toISOString().split('T')[0];
+        console.log(`Mail ${mailId}: inferred dueDate=${analysis.dueDate} (urgent item with no explicit date)`);
+      }
+    }
+
     // Auto-set reminder: 2 days before due date (if in the future)
     let reminderAt = null;
     if (analysis.dueDate) {

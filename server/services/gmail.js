@@ -179,6 +179,16 @@ async function analyzeGmailItem(mailId, userId, attachmentPaths, emailBody, subj
       analysis = await analyzeEmailText(emailBody, subject, sender);
     }
 
+    // ── Infer due date for urgent items with no explicit date ──────────────
+    if (!analysis.dueDate && analysis.urgency === 'high') {
+      const actions = analysis.suggestedActions || [];
+      const needsAction = actions.includes('pay_bill') || actions.includes('schedule_followup');
+      if (needsAction) {
+        analysis.dueDate = new Date().toISOString().split('T')[0];
+        console.log(`Gmail mail ${mailId}: inferred dueDate=${analysis.dueDate} (urgent item with no explicit date)`);
+      }
+    }
+
     // Auto-reminder: 2 days before due date
     let reminderAt = null;
     if (analysis.dueDate) {

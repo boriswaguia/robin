@@ -110,7 +110,7 @@ You MUST respond with valid JSON only (no markdown, no explanation). Use this ex
   "receiver": "The recipient/addressee name — the person or household the mail is addressed TO (or 'Unknown' if not identifiable)",
   "category": "One of: bill, personal, government, legal, medical, insurance, financial, advertisement, subscription, tax, delivery, other",
   "urgency": "One of: low, medium, high",
-  "dueDate": "Any due date mentioned as ISO 8601 date string (YYYY-MM-DD) or null — ALWAYS convert to this format regardless of how the date appears in the document (e.g. '13.04.2026' → '2026-04-13', 'April 13, 2026' → '2026-04-13'). If there are multiple installment due dates, use the EARLIEST one.",
+  "dueDate": "Any due date mentioned OR IMPLIED as ISO 8601 date string (YYYY-MM-DD) or null — ALWAYS convert to this format regardless of how the date appears in the document (e.g. '13.04.2026' → '2026-04-13', 'April 13, 2026' → '2026-04-13'). If there are multiple installment due dates, use the EARLIEST one. IMPORTANT: If the document demands IMMEDIATE action (e.g. 'pay immediately', 'sofort zahlen', 'umgehend', 'unverzüglich', 'fällig', 'sofortige Zahlung', threatens enforcement/Vollstreckung/Zwangsvollstreckung/Mahnung) but does NOT state an explicit due date, you MUST still set a dueDate — use TODAY's date. Documents with overdue balances, final warnings, or enforcement threats are inherently due NOW.",
   "amountDue": "Any amount due (as string like '$45.00' or '€45,00') or null. If there are multiple installments, use the amount of the FIRST installment.",
   "installments": [
     { "dueDate": "YYYY-MM-DD", "amount": "string like '€45.00'", "label": "Description like 'Rate 1' or '1. Installment'" }
@@ -221,7 +221,7 @@ Category guidance:
 - other: Anything that doesn't fit above
 
 Urgency guidance:
-- high: Due within 7 days, legal deadlines, court dates, time-critical government notices
+- high: Due within 7 days, legal deadlines, court dates, time-critical government notices, demands for immediate payment, enforcement/garnishment threats, final warnings (Mahnung, Vollstreckung)
 - medium: Due within 30 days, regular bills, appointment reminders, insurance updates, any letter asking you to take action by a specific date
 - low: No deadline, advertisements, informational letters, general correspondence, confirmations
 
