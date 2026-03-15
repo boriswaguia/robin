@@ -50,13 +50,12 @@ In production you may want to remove the `db` and `server` host port mappings an
 ### Production
 - Docker Engine 24+
 - Docker Compose v2
-- A Google Cloud account with [Cloud Vision API](https://console.cloud.google.com/apis/library/vision.googleapis.com) enabled
-- An [OpenAI API key](https://platform.openai.com/api-keys)
+- A [Google Gemini API key](https://ai.google.dev) for OCR + AI analysis
 
 ### Development (local, no Docker)
 - Node.js 20+
 - PostgreSQL 16 (or run only the db via Docker — see below)
-- Same API keys as above
+- A Gemini API key (same as above)
 
 ---
 
@@ -70,10 +69,18 @@ cp .env.docker .env
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GOOGLE_CLOUD_API_KEY` | Yes | Google Cloud Vision API key |
-| `OPENAI_API_KEY` | Yes | OpenAI API key |
-| `JWT_SECRET` | Yes | Secret for signing JWTs — use a long random string in production |
+| `GEMINI_API_KEY` | Yes | Google Gemini API key for OCR + AI analysis |
+| `JWT_SECRET` | Yes | Secret for signing JWTs — use a long random string |
+| `ENCRYPTION_KEY` | Yes | AES-256-GCM key (64 hex chars / 32 bytes) for data-at-rest encryption |
+| `POSTGRES_PASSWORD` | Yes (Docker) | PostgreSQL password — set automatically in compose |
 | `DATABASE_URL` | Auto | Set automatically by docker-compose; only needed for local dev |
+| `GOOGLE_CLIENT_ID` | No | Gmail OAuth client ID (for Gmail sync) |
+| `GOOGLE_CLIENT_SECRET` | No | Gmail OAuth client secret |
+| `GOOGLE_REDIRECT_URI` | No | Gmail OAuth redirect URI (e.g. `https://yourdomain.com/api/gmail/callback`) |
+| `VAPID_PUBLIC_KEY` | No | Web Push VAPID public key (for push notifications) |
+| `VAPID_PRIVATE_KEY` | No | Web Push VAPID private key |
+| `VAPID_EMAIL` | No | Contact email for VAPID (e.g. `mailto:you@example.com`) |
+| `ADMIN_EMAIL` | No | Auto-promote this user to admin on server start |
 | `PORT` | No | Server port, defaults to `3001` |
 
 **Generating a secure JWT secret:**
@@ -310,17 +317,17 @@ docker compose restart server   # retry server after db is healthy
 
 ---
 
-### `GOOGLE_CLOUD_API_KEY` / `OPENAI_API_KEY` warnings at build time
+### `GEMINI_API_KEY` warnings at build time
 ```
 variable is not set. Defaulting to a blank string.
 ```
-This is a warning, not an error. The keys are only needed at **runtime**, not at build time. Make sure your `.env` file exists before running `docker compose up`.
+This is a warning, not an error. The key is only needed at **runtime**, not at build time. Make sure your `.env` file exists before running `docker compose up`.
 
 ---
 
-### OCR returns no text
+### AI analysis returns no results
 - Ensure the image is well-lit and in focus
-- The Vision API key must have the **Cloud Vision API** enabled (not just created)
+- Check that your Gemini API key is valid and has quota remaining
 - Check the server logs: `docker compose logs server`
 
 ---
