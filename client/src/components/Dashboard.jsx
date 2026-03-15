@@ -93,7 +93,11 @@ export default function Dashboard() {
     }
     const diff = score(a) - score(b);
     if (diff !== 0) return diff;
-    return new Date(b.createdAt) - new Date(a.createdAt); // newest first within same priority
+    // Within same priority: sort by dueDate ascending (soonest first), then by createdAt descending
+    if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+    if (a.dueDate) return -1; // items with due dates come first
+    if (b.dueDate) return 1;
+    return new Date(b.createdAt) - new Date(a.createdAt); // newest first if no due dates
   }
 
   const filtered = (filter === 'all'
