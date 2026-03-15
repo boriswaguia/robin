@@ -21,6 +21,10 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const IS_PROD = process.env.NODE_ENV === 'production';
 
+// Trust the first proxy (nginx) so express-rate-limit sees real client IPs
+// instead of the nginx container IP for all requests.
+app.set('trust proxy', 1);
+
 // Ensure uploads directory exists
 ensureDirs();
 

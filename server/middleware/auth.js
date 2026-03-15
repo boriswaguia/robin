@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
+import { PrismaClient } from '@prisma/client';
 
+const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
 
@@ -8,7 +10,7 @@ if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
  * Checks httpOnly cookie first (browsers), then Authorization: Bearer header (API clients).
  * Adds req.user = { id, email, name } on success.
  */
-export function authenticate(req, res, next) {
+export async function authenticate(req, res, next) {
   // 1. Prefer the httpOnly cookie — not accessible to JS, XSS-proof
   const cookieToken = req.cookies?.robin_session;
 
@@ -24,6 +26,14 @@ export function authenticate(req, res, next) {
 
   try {
     const payload = jwt.verify(token, JWT_SECRET);
+    // Verify the token hasn't been revoked (tokenVersion must match DB)
+    const user = await prisma.user.findUnique({
+      where: { id: payload.id },
+      select: { id: true, tokenVersion: true },
+    });
+    if (!user || payload.tokenVersion !== user.tokenVersion) {
+      return res.status(401).json({ error: 'Session has been revoked. Please log in again.' });
+    }
     req.user = { id: payload.id, email: payload.email, name: payload.name };
     next();
   } catch {
@@ -36,7 +46,7 @@ export function authenticate(req, res, next) {
  */
 export function signToken(user) {
   return jwt.sign(
-    { id: user.id, email: user.email, name: user.name },
+    { id: user.id, email: user.email, name: user.name, tokenVersion: user.tokenVersion ?? 0 },
     JWT_SECRET,
     { expiresIn: '7d' }
   );
@@ -60,6 +70,7 @@ export function setSessionCookie(res, token) {
  * Clear the session cookie (for logout).
  */
 export function clearSessionCookie(res) {
-  res.clearCookie('robin_session', { httpOnly: true, sameSite: 'lax', path: '/' });
+  const IS_PROD = process.env.NODE_ENV === 'production';
+  res.clearCookie('robin_session', { httpOnly: true, secure: IS_PROD, sameSite: 'lax', path: '/' });
 }
 

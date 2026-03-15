@@ -58,17 +58,17 @@ export async function getContacts(userId) {
 
 /** Get all mail for a specific contact (as sender OR receiver) */
 export async function getMailByContact(userId, contactName) {
-  return prisma.mail.findMany({
-    where: {
-      userId,
-      status: { not: 'processing' },
-      OR: [
-        { sender: { equals: contactName, mode: 'insensitive' } },
-        { receiver: { equals: contactName, mode: 'insensitive' } },
-      ],
-    },
+  // Fetch all mail and filter in JS — sender/receiver are encrypted at rest
+  // so SQL-level equality checks would compare plaintext against ciphertext.
+  const allMail = await prisma.mail.findMany({
+    where: { userId, status: { not: 'processing' } },
     orderBy: { createdAt: 'desc' },
   });
+  const lower = contactName.toLowerCase();
+  return allMail.filter(m =>
+    (m.sender && m.sender.toLowerCase() === lower) ||
+    (m.receiver && m.receiver.toLowerCase() === lower)
+  );
 }
 
 export async function getMailById(id, userId) {

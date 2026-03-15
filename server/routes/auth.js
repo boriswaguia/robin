@@ -102,9 +102,18 @@ router.post('/login', loginRules, async (req, res) => {
 });
 
 // POST /api/auth/logout
-router.post('/logout', (req, res) => {
+router.post('/logout', authenticate, async (req, res) => {
+  // Bump tokenVersion so this JWT (and any copies) cannot be reused
+  await prisma.user.update({ where: { id: req.user.id }, data: { tokenVersion: { increment: 1 } } });
   clearSessionCookie(res);
   res.json({ success: true });
+});
+
+// POST /api/auth/logout-all — revoke all active sessions across all devices
+router.post('/logout-all', authenticate, async (req, res) => {
+  await prisma.user.update({ where: { id: req.user.id }, data: { tokenVersion: { increment: 1 } } });
+  clearSessionCookie(res);
+  res.json({ success: true, message: 'All sessions have been revoked.' });
 });
 
 // GET /api/auth/me — get current user info
