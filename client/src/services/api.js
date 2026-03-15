@@ -136,6 +136,12 @@ export async function getDueReminders() {
   return res.json();
 }
 
+export async function getAgenda() {
+  const res = await fetch(`${API_BASE}/agenda`, OPTS);
+  if (!res.ok) throw new Error('Failed to fetch agenda');
+  return res.json();
+}
+
 // ── Sharing ─────────────────────────────────────────────────────────────────
 
 const SHARE_BASE = '/api/sharing';

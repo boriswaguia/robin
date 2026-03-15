@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Mail, ScanLine, Home, LogOut, CalendarDays, BookUser, Settings } from 'lucide-react';
+import { Mail, ScanLine, Home, LogOut, CalendarDays, BookUser, Settings, ClipboardList } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Layout({ children }) {
@@ -29,7 +29,11 @@ export default function Layout({ children }) {
       <nav className="bottom-nav">
         <Link to="/" className={`nav-item ${pathname === '/' ? 'active' : ''}`}>
           <Home size={22} />
-          <span>Dashboard</span>
+          <span>Home</span>
+        </Link>
+        <Link to="/agenda" className={`nav-item ${pathname === '/agenda' ? 'active' : ''}`}>
+          <ClipboardList size={22} />
+          <span>Agenda</span>
         </Link>
         <Link to="/scan" className={`nav-item scan-btn ${pathname === '/scan' ? 'active' : ''}`}>
           <ScanLine size={26} />

@@ -10,6 +10,7 @@ import Directory from './components/Directory';
 import ContactDetail from './components/ContactDetail';
 import AuthPage from './components/AuthPage';
 import Integrations from './components/Integrations';
+import Agenda from './components/Agenda';
 import ConsentScreen from './components/ConsentScreen';
 import LandingPage from './components/LandingPage';
 import CookieConsent from './components/CookieConsent';
@@ -83,6 +84,7 @@ function AppRoutes() {
     <Layout>
       <Routes>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/agenda" element={<Agenda />} />
         <Route path="/scan" element={<Scanner />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/directory" element={<Directory />} />

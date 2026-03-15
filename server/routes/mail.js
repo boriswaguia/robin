@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import { v4 as uuid } from 'uuid';
 import prisma from '../services/db.js';
 import { analyzeMail, findRelatedMail, analyzeVoice } from '../services/ai.js';
-import { getAllMail, getMailById, saveMail, updateMail, deleteMail, getRelatedMail, searchMail, getContacts, getMailByContact, getDueReminders } from '../services/storage.js';
+import { getAllMail, getMailById, saveMail, updateMail, deleteMail, getRelatedMail, searchMail, getContacts, getMailByContact, getDueReminders, getAgendaItems } from '../services/storage.js';
 import { authenticate } from '../middleware/auth.js';
 import { encryptBuffer, isEncryptionEnabled } from '../services/crypto.js';
 
@@ -236,6 +236,17 @@ router.patch('/:id/reminder', async (req, res) => {
   });
   if (!updated) return res.status(404).json({ error: 'Mail not found' });
   res.json(updated);
+});
+
+// GET /api/mail/agenda — grouped view: overdue, due this week, upcoming
+router.get('/agenda', async (req, res) => {
+  try {
+    const agenda = await getAgendaItems(req.user.id);
+    res.json(agenda);
+  } catch (err) {
+    console.error('Agenda error:', err.message);
+    res.status(500).json({ error: 'Failed to load agenda' });
+  }
 });
 
 // GET /api/mail/reminders/due — get reminders that are due (for in-app notification polling)

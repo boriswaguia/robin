@@ -149,6 +149,42 @@ export async function getRelatedMail(threadId, excludeId, userId) {
   });
 }
 
+/** Get agenda items: mail with a dueDate, grouped by overdue / this-week / upcoming */
+export async function getAgendaItems(userId) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekEnd = new Date(today);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+
+  // Fetch all non-processing mail that has a dueDate and hasn't been fully resolved
+  const items = await prisma.mail.findMany({
+    where: {
+      userId,
+      dueDate: { not: null },
+      status: { notIn: ['processing', 'error', 'rejected'] },
+    },
+    orderBy: { dueDate: 'asc' },
+  });
+
+  const overdue = [];
+  const thisWeek = [];
+  const upcoming = [];
+
+  for (const item of items) {
+    const due = new Date(item.dueDate);
+    if (isNaN(due.getTime())) continue; // skip invalid dates
+    if (due < today) {
+      overdue.push(item);
+    } else if (due < weekEnd) {
+      thisWeek.push(item);
+    } else {
+      upcoming.push(item);
+    }
+  }
+
+  return { overdue, thisWeek, upcoming };
+}
+
 /** Get reminders that are due for a specific user */
 export async function getDueReminders(userId) {
   return prisma.mail.findMany({
