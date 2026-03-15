@@ -689,29 +689,45 @@ export default function MailDetail() {
   );
 }
 
-/** Render a text value with clickable emails and phone numbers */
-function Linkified({ text }) {
+/**
+ * Render text with clickable emails and (optionally) phone numbers.
+ * Phone linking is opt-in via linkPhones prop to avoid false positives on
+ * IBANs, reference numbers, account numbers, etc.
+ */
+function Linkified({ text, linkPhones = false }) {
   if (!text) return null;
-  // Match emails and phone numbers (intl and local formats)
-  const pattern = /([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})|(\+?[\d][\d\s\-/().]{6,}\d)/g;
+  const emailRe = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+  // Strict phone: must start with + or 0, followed by digits/spaces/dashes, 7-15 digits total
+  const phoneRe = /(?:\+\d{1,3}[\s\-]?)?(?:\(?\d{2,5}\)?[\s\-]?)[\d\s\-/]{4,}(?<!\s)/g;
+
+  const pattern = linkPhones
+    ? new RegExp(`(${emailRe.source})|(${phoneRe.source})`, 'g')
+    : new RegExp(`(${emailRe.source})`, 'g');
+
   const parts = [];
   let last = 0;
   let match;
   while ((match = pattern.exec(text)) !== null) {
     if (match.index > last) parts.push(text.slice(last, match.index));
     if (match[1]) {
-      // Email
       parts.push(<a key={match.index} href={`mailto:${match[1]}`} className="inline-link">{match[1]}</a>);
-    } else if (match[2]) {
-      // Phone — strip formatting for the tel: href
+    } else if (linkPhones && match[2]) {
       const digits = match[2].replace(/[^\d+]/g, '');
-      parts.push(<a key={match.index} href={`tel:${digits}`} className="inline-link">{match[2]}</a>);
+      // Only link if it has 7-15 digits (real phone numbers)
+      if (digits.replace(/\+/, '').length >= 7 && digits.replace(/\+/, '').length <= 15) {
+        parts.push(<a key={match.index} href={`tel:${digits}`} className="inline-link">{match[2]}</a>);
+      } else {
+        parts.push(match[2]);
+      }
     }
     last = match.index + match[0].length;
   }
   if (last < text.length) parts.push(text.slice(last));
   return parts.length > 0 ? <>{parts}</> : <>{text}</>;
 }
+
+/** Labels that indicate phone/fax values */
+const PHONE_LABELS = /telefon|phone|tel\b|handy|mobil|fax|hotline|ruf/i;
 
 function ActionableRow({ label, value, copyable, field, copiedField, setCopiedField }) {
   function handleCopy() {
@@ -720,10 +736,11 @@ function ActionableRow({ label, value, copyable, field, copiedField, setCopiedFi
     setTimeout(() => setCopiedField(null), 2000);
   }
   const isCopied = copiedField === field;
+  const isPhone = PHONE_LABELS.test(label || '');
   return (
     <div className="actionable-row">
       <span className="actionable-label">{label}</span>
-      <span className="actionable-value"><Linkified text={value} /></span>
+      <span className="actionable-value"><Linkified text={value} linkPhones={isPhone} /></span>
       {copyable && (
         <button className="copy-btn" onClick={handleCopy} title="Copy">
           {isCopied ? <Check size={14} /> : <Copy size={14} />}
