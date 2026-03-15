@@ -115,7 +115,23 @@ router.post('/sync', authenticate, async (req, res) => {
     if (err.message === 'Sync already in progress') {
       return res.status(409).json({ error: 'A sync is already in progress. Please wait.' });
     }
-    console.error('Gmail sync error:', err);
+    // Detect insufficient scopes — user needs to disconnect and reconnect
+    if (err.code === 403 || err.status === 403 || /insufficient.*scop/i.test(err.message)) {
+      console.error('Gmail scope error — user needs to reconnect:', err.message);
+      return res.status(403).json({
+        error: 'Gmail permissions are outdated. Please disconnect and reconnect your Gmail account.',
+        reconnect: true,
+      });
+    }
+    // Detect revoked/expired refresh token
+    if (err.code === 401 || err.status === 401 || /invalid_grant|token.*revoked|token.*expired/i.test(err.message)) {
+      console.error('Gmail token expired/revoked:', err.message);
+      return res.status(401).json({
+        error: 'Gmail access has expired. Please disconnect and reconnect your Gmail account.',
+        reconnect: true,
+      });
+    }
+    console.error('Gmail sync error:', err.message);
     res.status(500).json({ error: err.message || 'Sync failed' });
   }
 });
