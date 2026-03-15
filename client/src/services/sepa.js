@@ -10,8 +10,8 @@
 const LABEL_PATTERNS = {
   iban:      /\biban\b/i,
   bic:       /\bbic\b|\bswift\b/i,
-  recipient: /recipient|beneficiary|payee|empf.nger|name/i,
-  reference: /reference|verwendungszweck|memo|remittance|ref\b/i,
+  recipient: /recipient|beneficiary|payee|empf.nger|kontoinhaber|name|inhaber/i,
+  reference: /reference|verwendungszweck|memo|remittance|ref\b|betreff|zahlungsreferenz/i,
 };
 
 /**
@@ -80,11 +80,12 @@ export function extractSepaFields(actionableInfo = []) {
  * @returns {string}  - Newline-separated GiroCode string to encode as QR
  */
 export function buildEpcQrString({ iban, bic = '', recipient, amount, currency = 'EUR', reference = '' }) {
-  if (!iban || !recipient) throw new Error('IBAN and recipient name are required for EPC QR');
+  if (!iban) throw new Error('IBAN is required for EPC QR');
+  const recipientName = recipient || 'Payment Recipient';
 
   // Sanitise
   const cleanIban = iban.replace(/\s/g, '').toUpperCase();
-  const cleanName = recipient.slice(0, 70);
+  const cleanName = recipientName.slice(0, 70);
   const amountField = amount ? `${currency}${parseFloat(amount).toFixed(2)}` : '';
   const refField = reference.slice(0, 140);
 

@@ -12,7 +12,8 @@ export default function SepaPayModal({ item, sepaFields, onClose }) {
   const [shared, setShared] = useState(false);
   const [tab, setTab] = useState('qr'); // 'qr' | 'link'
 
-  const { iban, bic, recipient, reference } = sepaFields;
+  const { iban, bic, reference } = sepaFields;
+  const recipient = sepaFields.recipient || item.sender || null;
   const { amount, currency } = parseAmount(item.amountDue);
 
   const paytoUri = iban ? buildPaytoUri({ iban, recipient, amount, currency, reference }) : null;
