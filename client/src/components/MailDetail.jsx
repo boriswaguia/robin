@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Trash2, FileText, Image, CalendarPlus, ClipboardList, Copy, Check, Link2, Landmark, Pencil, Save, X, Bell, BellOff, ChevronLeft, ChevronRight, Share2, Users, Mic, AlertTriangle, CheckCircle2, Clock, Archive, Reply, CreditCard, CalendarClock, Star, RefreshCw } from 'lucide-react';
-import { getMailById, deleteMailItem, editMail, setReminder, performAction, rescanMail, getSharingConnections, getMailShares, toggleMailShare } from '../services/api';
+import { ArrowLeft, Trash2, FileText, Image, CalendarPlus, ClipboardList, Copy, Check, Link2, Landmark, Pencil, Save, X, Bell, BellOff, ChevronLeft, ChevronRight, Share2, Users, Mic, AlertTriangle, CheckCircle2, Clock, Archive, Reply, CreditCard, CalendarClock, Star, RefreshCw, Undo2 } from 'lucide-react';
+import { getMailById, deleteMailItem, editMail, setReminder, performAction, reopenMail, rescanMail, getSharingConnections, getMailShares, toggleMailShare } from '../services/api';
 import { getCategoryColor, getCategoryIcon, formatDate } from '../utils';
 import { downloadCalendarEvent } from '../services/calendar';
 import { extractSepaFields } from '../services/sepa';
@@ -81,16 +81,18 @@ export default function MailDetail() {
       })
       .catch(() => navigate('/'))
       .finally(() => setLoading(false));
-  }, [id, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   // Auto-refresh while processing (e.g. after rescan)
+  const isProcessing = item?.status === 'processing';
   useEffect(() => {
-    if (item?.status !== 'processing') return;
+    if (!isProcessing) return;
     const interval = setInterval(() => {
       getMailById(id).then((data) => setItem(data)).catch(() => {});
     }, 2000);
     return () => clearInterval(interval);
-  }, [id, item?.status]);
+  }, [id, isProcessing]);
 
   async function handleDelete() {
     if (!confirm('Delete this mail item?')) return;
@@ -341,6 +343,23 @@ export default function MailDetail() {
                       <span className="banner-title">Done — {ACTION_CONFIG[item.actionTaken]?.label || item.actionTaken}</span>
                       {item.actionNote && <span className="banner-subtitle">{item.actionNote}</span>}
                     </div>
+                    {!item.readOnly && (
+                      <button
+                        className="undo-btn"
+                        onClick={async () => {
+                          try {
+                            const updated = await reopenMail(item.id);
+                            setItem(updated);
+                          } catch (err) {
+                            alert(err.message);
+                          }
+                        }}
+                        title="Undo — reopen this item"
+                      >
+                        <Undo2 size={16} />
+                        <span>Undo</span>
+                      </button>
+                    )}
                   </>
                 ) : needsAction ? (
                   <>

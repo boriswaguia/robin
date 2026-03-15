@@ -329,6 +329,20 @@ router.patch('/:id/action', async (req, res) => {
   res.json(updated);
 });
 
+// PATCH /api/mail/:id/reopen — undo a completed action, revert to active
+router.patch('/:id/reopen', async (req, res) => {
+  const item = await getMailById(req.params.id, req.user.id);
+  if (!item) return res.status(404).json({ error: 'Mail not found' });
+
+  const updated = await updateMail(req.params.id, req.user.id, {
+    status: 'new',
+    actionTaken: null,
+    actionNote: null,
+  });
+
+  res.json(updated);
+});
+
 // DELETE /api/mail/:id
 router.delete('/:id', async (req, res) => {
   const item = await getMailById(req.params.id, req.user.id);

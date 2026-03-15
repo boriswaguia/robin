@@ -70,6 +70,20 @@ export async function performAction(id, action, note = '') {
   return res.json();
 }
 
+export async function reopenMail(id) {
+  const res = await fetch(`${API_BASE}/${id}/reopen`, {
+    method: 'PATCH',
+    ...OPTS,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Reopen failed' }));
+    throw new Error(err.error || 'Failed to reopen item');
+  }
+
+  return res.json();
+}
+
 export async function deleteMailItem(id) {
   const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE', ...OPTS });
   if (!res.ok) throw new Error('Failed to delete');
