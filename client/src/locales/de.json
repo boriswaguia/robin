@@ -454,7 +454,7 @@
     "privacyNav": "Datenschutz",
     "faq": "FAQ",
     "signIn": "Anmelden",
-    "heroBadge": "DSGVO-konform · Verschlüsselt · Open Source",
+    "heroBadge": "DSGVO-konform · Verschlüsselt · Selbst gehostet",
     "heroTitle1": "Ihre Post,",
     "heroTitle2": "verstanden.",
     "heroSub": "Robin scannt Ihre Briefpost und E-Mails, extrahiert das Wesentliche — Fristen, Beträge, IBANs, Termine — und sagt Ihnen genau, was zu tun ist. Keine Papierstapel mehr.",
@@ -504,14 +504,14 @@
     "faq4q": "Ist Robin DSGVO-konform?",
     "faq4a": "Ja. Robin erhebt nur die für den Dienst notwendigen Daten, verarbeitet sie mit Ihrer ausdrücklichen Einwilligung und gibt Ihnen volle Kontrolle (Zugang, Berichtigung, Löschung, Export, Widerspruch). Keine Daten werden an Dritte weitergegeben, außer an Google Gemini für die KI-Analyse.",
     "faq5q": "Ist Robin kostenlos?",
-    "faq5a": "Robin ist ein selbst gehostetes Open-Source-Tool. Sie betreiben es selbst. Die einzigen externen Kosten sind die Google Gemini API, die ein großzügiges kostenloses Kontingent hat, das den persönlichen Gebrauch abdeckt.",
+    "faq5a": "Robin ist ein selbst gehostetes Tool. Sie betreiben es selbst. Die einzigen externen Kosten sind die Google Gemini API, die ein großzügiges kostenloses Kontingent hat, das den persönlichen Gebrauch abdeckt.",
     "ctaTitle": "Bereit, Ihre Post in den Griff zu bekommen?",
-    "ctaSub": "Kostenlos, privat und Open Source. Starten Sie in unter einer Minute.",
+    "ctaSub": "Kostenlos, privat und selbst gehostet. Starten Sie in unter einer Minute.",
     "ctaButton": "Konto erstellen",
     "footerPrivacy": "Datenschutzrichtlinie",
     "footerTerms": "Nutzungsbedingungen",
     "footerFaq": "FAQ",
-    "footerCopy": "© {{year}} Robin. Open Source. Selbst gehostet."
+    "footerCopy": "© {{year}} Robin. Selbst gehostet."
   },
   "admin": {
     "title": "Verwaltung",

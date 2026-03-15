@@ -454,7 +454,7 @@
     "privacyNav": "Privacy",
     "faq": "FAQ",
     "signIn": "Sign In",
-    "heroBadge": "GDPR compliant · Encrypted · Open Source",
+    "heroBadge": "GDPR compliant · Encrypted · Self-hosted",
     "heroTitle1": "Your mail,",
     "heroTitle2": "understood.",
     "heroSub": "Robin scans your postal mail and email, extracts what matters — due dates, amounts, IBANs, appointments — and tells you exactly what to do. No more paper piles.",
@@ -504,14 +504,14 @@
     "faq4q": "Is Robin GDPR / DSGVO compliant?",
     "faq4a": "Yes. Robin collects only the data necessary to provide the service, processes it with your explicit consent, and gives you full control (access, rectify, erase, export, object). No data is shared with third parties except Google Gemini for AI analysis.",
     "faq5q": "Is Robin free?",
-    "faq5a": "Robin is a self-hosted open-source tool. You run it yourself. The only external cost is the Google Gemini API, which has a generous free tier that covers personal use.",
+    "faq5a": "Robin is a self-hosted tool. You run it yourself. The only external cost is the Google Gemini API, which has a generous free tier that covers personal use.",
     "ctaTitle": "Ready to take control of your mail?",
-    "ctaSub": "Free, private, and open source. Start in under a minute.",
+    "ctaSub": "Free, private, and self-hosted. Start in under a minute.",
     "ctaButton": "Create Your Account",
     "footerPrivacy": "Privacy Policy",
     "footerTerms": "Terms of Use",
     "footerFaq": "FAQ",
-    "footerCopy": "© {{year}} Robin. Open source. Self-hosted."
+    "footerCopy": "© {{year}} Robin. Self-hosted."
   },
   "admin": {
     "title": "Admin Panel",

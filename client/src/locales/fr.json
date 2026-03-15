@@ -454,7 +454,7 @@
     "privacyNav": "Confidentialité",
     "faq": "FAQ",
     "signIn": "Se connecter",
-    "heroBadge": "Conforme au RGPD · Chiffré · Open Source",
+    "heroBadge": "Conforme au RGPD · Chiffré · Auto-hébergé",
     "heroTitle1": "Votre courrier,",
     "heroTitle2": "compris.",
     "heroSub": "Robin scanne votre courrier postal et vos e-mails, extrait l'essentiel — échéances, montants, IBAN, rendez-vous — et vous dit exactement quoi faire. Fini les piles de papier.",
@@ -504,14 +504,14 @@
     "faq4q": "Robin est-il conforme au RGPD / DSGVO ?",
     "faq4a": "Oui. Robin ne collecte que les données nécessaires au service, les traite avec votre consentement explicite et vous donne un contrôle total (accès, rectification, effacement, exportation, opposition). Aucune donnée n'est partagée avec des tiers sauf Google Gemini pour l'analyse IA.",
     "faq5q": "Robin est-il gratuit ?",
-    "faq5a": "Robin est un outil open source auto-hébergé. Vous l'exécutez vous-même. Le seul coût externe est l'API Google Gemini, qui offre un niveau gratuit généreux couvrant l'usage personnel.",
+    "faq5a": "Robin est un outil auto-hébergé. Vous l'exécutez vous-même. Le seul coût externe est l'API Google Gemini, qui offre un niveau gratuit généreux couvrant l'usage personnel.",
     "ctaTitle": "Prêt à reprendre le contrôle de votre courrier ?",
-    "ctaSub": "Gratuit, privé et open source. Commencez en moins d'une minute.",
+    "ctaSub": "Gratuit, privé et auto-hébergé. Commencez en moins d'une minute.",
     "ctaButton": "Créer votre compte",
     "footerPrivacy": "Politique de confidentialité",
     "footerTerms": "Conditions d'utilisation",
     "footerFaq": "FAQ",
-    "footerCopy": "© {{year}} Robin. Open source. Auto-hébergé."
+    "footerCopy": "© {{year}} Robin. Auto-hébergé."
   },
   "admin": {
     "title": "Administration",
