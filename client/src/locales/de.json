@@ -285,6 +285,7 @@
       "howStep4": "Analysiert E-Mail-Text und PDF-/Bildanhänge",
       "howStep5": "Ergebnisse erscheinen in Ihrem Dashboard neben gescannter Post",
       "syncResult": "{{checked}} E-Mail(s) geprüft, {{imported}} Element(e) importiert.",
+      "lastSyncAt": "Letzte Synchronisierung: {{date}}",
       "syncing": "Synchronisierung…",
       "syncProgress": "{{count}} bisher geprüft",
       "syncStarting": "wird gestartet",

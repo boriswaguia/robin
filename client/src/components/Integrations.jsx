@@ -116,7 +116,7 @@ function ProfileCard() {
 }
 
 export default function Integrations() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // ── Gmail state ────────────────────────────────────────────────────────────
   const [gmail, setGmail]               = useState(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
@@ -346,7 +346,12 @@ export default function Integrations() {
             {syncResult && syncResult.status === 'completed' && (
               <div className="sync-result">
                 <CheckCircle size={16} />
-                <span>{t('integrations.gmail.syncResult', { checked: syncResult.scanned, imported: syncResult.found })}</span>
+                <span>
+                  {t('integrations.gmail.syncResult', { checked: syncResult.scanned, imported: syncResult.found })}
+                  {syncResult.completedAt && (
+                    <> — {t('integrations.gmail.lastSyncAt', { date: new Date(syncResult.completedAt).toLocaleString(i18n.language) })}</>
+                  )}
+                </span>
               </div>
             )}
             {syncResult && syncResult.status === 'in_progress' && (

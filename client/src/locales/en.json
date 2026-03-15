@@ -285,6 +285,7 @@
       "howStep4": "Analyzes email body and any PDF/image attachments",
       "howStep5": "Results appear in your Dashboard alongside scanned mail",
       "syncResult": "Checked {{checked}} email(s), imported {{imported}} item(s).",
+      "lastSyncAt": "Last synced: {{date}}",
       "syncing": "Syncing…",
       "syncProgress": "{{count}} checked so far",
       "syncStarting": "starting",

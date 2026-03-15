@@ -285,6 +285,7 @@
       "howStep4": "Analyse le corps de l'e-mail et les pièces jointes PDF/images",
       "howStep5": "Les résultats apparaissent dans votre tableau de bord avec le courrier scanné",
       "syncResult": "{{checked}} e-mail(s) vérifiés, {{imported}} élément(s) importé(s).",
+      "lastSyncAt": "Dernière synchronisation : {{date}}",
       "syncing": "Synchronisation…",
       "syncProgress": "{{count}} vérifiés jusqu'ici",
       "syncStarting": "démarrage",
