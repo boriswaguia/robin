@@ -18,6 +18,7 @@ model User {
   consentedAt       DateTime?  // when the user accepted terms + GDPR consent
   consentVersion    String?    // version of the terms they agreed to (e.g. "1.0")
   role              String   @default("user") // user | admin
+  language          String   @default("en")   // UI + AI response language (en, fr, de)
   tokenVersion      Int        @default(0) // bumped on logout-all to invalidate all JWTs
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

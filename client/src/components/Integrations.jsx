@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   getSharingConnections, getPendingInvites, sendSharingInvite,
   acceptInvite, rejectInvite, removeConnection, updateSharedCategories,
+  updateLanguage,
 } from '../services/api';
 import {
   subscribeToPush, unsubscribeFromPush, isThisBrowserSubscribed,
@@ -97,7 +98,11 @@ function ProfileCard() {
             <select
               className="lang-select"
               value={i18n.language?.substring(0, 2)}
-              onChange={(e) => i18n.changeLanguage(e.target.value)}
+              onChange={(e) => {
+                const lang = e.target.value;
+                i18n.changeLanguage(lang);
+                updateLanguage(lang).catch(() => {});
+              }}
             >
               {LANGUAGES.map((l) => (
                 <option key={l.code} value={l.code}>{l.label}</option>

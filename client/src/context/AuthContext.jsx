@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import i18n from '../i18n';
 
 const AuthContext = createContext(null);
 
@@ -13,7 +14,13 @@ export function AuthProvider({ children }) {
         if (!res.ok) throw new Error('No session');
         return res.json();
       })
-      .then((userData) => setUser(userData))
+      .then((userData) => {
+        setUser(userData);
+        // Sync i18n to the user's stored language preference
+        if (userData.language && userData.language !== i18n.language) {
+          i18n.changeLanguage(userData.language);
+        }
+      })
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []);

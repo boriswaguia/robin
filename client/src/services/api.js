@@ -3,6 +3,18 @@ const API_BASE = '/api/mail';
 // All requests include credentials so the httpOnly session cookie is sent automatically
 const OPTS = { credentials: 'include' };
 
+/** Update the user's preferred language on the server */
+export async function updateLanguage(language) {
+  const res = await fetch('/api/auth/language', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    ...OPTS,
+    body: JSON.stringify({ language }),
+  });
+  if (!res.ok) throw new Error('Failed to update language');
+  return res.json();
+}
+
 export async function scanMail(files) {
   const formData = new FormData();
   // Support single file or array of files

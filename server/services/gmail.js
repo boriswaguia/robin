@@ -165,16 +165,16 @@ async function extractParts(gmail, messageId, part, attachmentPaths, textChunks)
 
 // ── Background analysis (mirrors processMailAsync in mail routes) ────────────
 
-async function analyzeGmailItem(mailId, userId, attachmentPaths, emailBody, subject, sender) {
+async function analyzeGmailItem(mailId, userId, attachmentPaths, emailBody, subject, sender, language = 'en') {
   try {
     let analysis;
 
     if (attachmentPaths.length > 0) {
       // Use image/PDF pipeline — same as camera scan
-      analysis = await analyzeMail(attachmentPaths);
+      analysis = await analyzeMail(attachmentPaths, { language });
     } else {
       // Text-only email — pass body + metadata directly to Gemini
-      analysis = await analyzeEmailText(emailBody, subject, sender);
+      analysis = await analyzeEmailText(emailBody, subject, sender, { language });
     }
 
     // ── Infer due date for urgent items with no explicit date ──────────────
@@ -324,6 +324,7 @@ export async function syncGmail(userId) {
 async function _doSync(userId, syncId) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user?.gmailRefreshToken) throw new Error('Gmail not connected');
+  const language = user.language || 'en';
 
   const gmail = await getGmailClient(user);
 
@@ -389,7 +390,7 @@ async function _doSync(userId, syncId) {
       });
 
       // Analyze in background — same pattern as camera scan
-      analyzeGmailItem(mailItem.id, userId, attachmentPaths, emailBody, subject, sender).catch((err) => {
+      analyzeGmailItem(mailItem.id, userId, attachmentPaths, emailBody, subject, sender, language).catch((err) => {
         console.error(`Background Gmail analysis failed for ${id}:`, err.message);
       });
     } catch (err) {

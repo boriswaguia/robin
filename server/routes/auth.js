@@ -125,13 +125,28 @@ router.get('/me', authenticate, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: { id: true, email: true, name: true, role: true, createdAt: true, consentedAt: true, consentVersion: true },
+      select: { id: true, email: true, name: true, role: true, language: true, createdAt: true, consentedAt: true, consentVersion: true },
     });
 
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json(user);
   } catch {
     res.status(500).json({ error: 'Failed to get user info' });
+  }
+});
+
+// PUT /api/auth/language — update the user's preferred language
+const SUPPORTED_LANGS = new Set(['en', 'fr', 'de']);
+router.put('/language', authenticate, async (req, res) => {
+  const { language } = req.body;
+  if (!language || !SUPPORTED_LANGS.has(language)) {
+    return res.status(400).json({ error: 'Unsupported language. Use one of: en, fr, de' });
+  }
+  try {
+    await prisma.user.update({ where: { id: req.user.id }, data: { language } });
+    res.json({ language });
+  } catch {
+    res.status(500).json({ error: 'Failed to update language' });
   }
 });
 

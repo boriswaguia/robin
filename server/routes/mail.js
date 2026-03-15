@@ -11,6 +11,12 @@ import { authenticate } from '../middleware/auth.js';
 import { encryptBuffer, isEncryptionEnabled } from '../services/crypto.js';
 import { logActivity } from '../middleware/admin.js';
 
+/** Read the user's stored language preference from the DB */
+async function getUserLanguage(userId) {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { language: true } });
+  return u?.language || 'en';
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const router = express.Router();
 
@@ -65,7 +71,8 @@ router.post('/scan', upload.array('images', 10), async (req, res) => {
     });
 
     // Fire-and-forget: process in background
-    processMailAsync(mailItem.id, req.user.id, imagePaths).catch((err) => {
+    const lang = await getUserLanguage(req.user.id);
+    processMailAsync(mailItem.id, req.user.id, imagePaths, lang).catch((err) => {
       // SECURITY: Only log the message, not the full error (may contain extracted document content)
       console.error(`Background processing failed for mail ${mailItem.id}:`, err.message);
     });
@@ -83,9 +90,9 @@ router.post('/scan', upload.array('images', 10), async (req, res) => {
 /**
  * Process a mail item in the background: run Gemini OCR+analysis, then update the DB record.
  */
-async function processMailAsync(mailId, userId, imagePaths) {
+async function processMailAsync(mailId, userId, imagePaths, language = 'en') {
   try {
-    const analysis = await analyzeMail(imagePaths);
+    const analysis = await analyzeMail(imagePaths, { language });
 
     // Try to find related/follow-up mail
     let threadId = mailId; // default: new thread = own ID
@@ -436,7 +443,8 @@ router.post('/voice', audioUpload.single('audio'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No audio file provided' });
 
     const mimeType = req.file.mimetype || 'audio/webm';
-    const analysis = await analyzeVoice(req.file.buffer, mimeType);
+    const lang = await getUserLanguage(req.user.id);
+    const analysis = await analyzeVoice(req.file.buffer, mimeType, { language: lang });
 
     const mailItem = await saveMail({
       userId: req.user.id,
