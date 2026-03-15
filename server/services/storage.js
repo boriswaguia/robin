@@ -191,6 +191,12 @@ export async function getAgendaItems(userId) {
     }
   }
 
+  // Sort each bucket by parsed date ascending (handles any string format)
+  const byDate = (a, b) => new Date(a.dueDate) - new Date(b.dueDate);
+  overdue.sort(byDate);
+  thisWeek.sort(byDate);
+  upcoming.sort(byDate);
+
   return { overdue, thisWeek, upcoming };
 }
 
