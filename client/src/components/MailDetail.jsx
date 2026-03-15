@@ -1,16 +1,37 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, FileText, Image, CalendarPlus, ClipboardList, Copy, Check, Link2, Landmark, Pencil, Save, X, Bell, BellOff, ChevronLeft, ChevronRight, Share2, Users, Mic } from 'lucide-react';
+import { ArrowLeft, Trash2, FileText, Image, CalendarPlus, ClipboardList, Copy, Check, Link2, Landmark, Pencil, Save, X, Bell, BellOff, ChevronLeft, ChevronRight, Share2, Users, Mic, AlertTriangle, CheckCircle2, Clock, Archive, Reply, CreditCard, CalendarClock, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { getMailById, deleteMailItem, editMail, setReminder, getSharingConnections, getMailShares, toggleMailShare } from '../services/api';
+import { getMailById, deleteMailItem, editMail, setReminder, performAction, getSharingConnections, getMailShares, toggleMailShare } from '../services/api';
 import { getCategoryColor, getCategoryIcon, formatDate } from '../utils';
 import { downloadCalendarEvent } from '../services/calendar';
 import { extractSepaFields } from '../services/sepa';
 import SepaPayModal from './SepaPayModal';
-import ActionPanel from './ActionPanel';
+
+const ACTION_CONFIG = {
+  archive: { label: 'Archive', icon: Archive, color: 'blue', desc: 'File away for records' },
+  reply: { label: 'Reply', icon: Reply, color: 'green', desc: 'Write back to sender' },
+  pay_bill: { label: 'Pay Bill', icon: CreditCard, color: 'orange', desc: 'Make payment' },
+  schedule_followup: { label: 'Follow Up', icon: CalendarClock, color: 'purple', desc: 'Set a follow-up date' },
+  discard: { label: 'Discard', icon: Trash2, color: 'red', desc: 'Not needed' },
+  mark_important: { label: 'Important', icon: Star, color: 'yellow', desc: 'Flag for attention' },
+};
 
 const CATEGORIES = ['bill', 'personal', 'government', 'legal', 'medical', 'insurance', 'financial', 'advertisement', 'subscription', 'reminder', 'tax', 'other'];
 const URGENCIES = ['low', 'medium', 'high'];
+
+function getDueDaysText(dueDate) {
+  if (!dueDate) return null;
+  const now = new Date();
+  const due = new Date(dueDate);
+  const diffMs = due - now;
+  const diffDays = Math.ceil(diffMs / 86400000);
+  if (diffDays < 0) return { text: `${Math.abs(diffDays)}d overdue`, overdue: true };
+  if (diffDays === 0) return { text: 'Due today', overdue: true };
+  if (diffDays === 1) return { text: 'Due tomorrow', overdue: false };
+  if (diffDays <= 7) return { text: `Due in ${diffDays} days`, overdue: false };
+  return { text: `Due ${due.toLocaleDateString()}`, overdue: false };
+}
 
 export default function MailDetail() {
   const { id } = useParams();
@@ -25,6 +46,11 @@ export default function MailDetail() {
   const [editFields, setEditFields] = useState({});
   const [saving, setSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
+  // Action handling
+  const [acting, setActing] = useState(null);
+  const [actionNote, setActionNote] = useState('');
+  const [showActionNote, setShowActionNote] = useState(false);
+  const [selectedAction, setSelectedAction] = useState(null);
   // Sharing
   const [showSharePanel, setShowSharePanel] = useState(false);
   const [outgoingConns, setOutgoingConns] = useState([]); // accepted connections where I'm the from
@@ -128,6 +154,30 @@ export default function MailDetail() {
     }
   }
 
+  async function handleAction(action) {
+    if (action === 'reply' || action === 'schedule_followup') {
+      setSelectedAction(action);
+      setShowActionNote(true);
+      return;
+    }
+    await executeAction(action);
+  }
+
+  async function executeAction(action, note = '') {
+    setActing(action);
+    try {
+      const updated = await performAction(item.id, action, note);
+      setItem(updated);
+      setShowActionNote(false);
+      setActionNote('');
+      setSelectedAction(null);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setActing(null);
+    }
+  }
+
   if (loading) return <div className="loading">Loading…</div>;
   if (!item) return null;
 
@@ -227,6 +277,100 @@ export default function MailDetail() {
             </>
           )}
         </div>
+
+        {/* === ACTION BANNER === */}
+        {!editing && (() => {
+          const suggested = item.suggestedActions || [];
+          const primaryAction = suggested[0];
+          const primaryConfig = primaryAction ? ACTION_CONFIG[primaryAction] : null;
+          const dueInfo = getDueDaysText(item.dueDate);
+          const isActionTaken = item.status !== 'new';
+          const needsAction = suggested.length > 0 && !isActionTaken;
+          const PrimaryIcon = primaryConfig?.icon;
+
+          return (
+            <div className={`action-banner ${isActionTaken ? 'done' : needsAction ? (item.urgency === 'high' ? 'urgent' : item.urgency === 'medium' ? 'medium' : 'action') : 'info'}`}>
+              <div className="action-banner-header">
+                {isActionTaken ? (
+                  <>
+                    <CheckCircle2 size={20} className="banner-icon done" />
+                    <div className="banner-text">
+                      <span className="banner-title">Done — {ACTION_CONFIG[item.actionTaken]?.label || item.actionTaken}</span>
+                      {item.actionNote && <span className="banner-subtitle">{item.actionNote}</span>}
+                    </div>
+                  </>
+                ) : needsAction ? (
+                  <>
+                    <AlertTriangle size={20} className="banner-icon" />
+                    <div className="banner-text">
+                      <span className="banner-title">Action Required</span>
+                      <span className="banner-subtitle">
+                        {primaryConfig && `Recommended: ${primaryConfig.label}`}
+                        {dueInfo && ` · ${dueInfo.text}`}
+                        {item.amountDue && ` · ${item.amountDue}`}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={20} className="banner-icon info" />
+                    <div className="banner-text">
+                      <span className="banner-title">No Action Needed</span>
+                      <span className="banner-subtitle">This item is for your information only</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {!isActionTaken && !item.readOnly && (
+                <div className="action-banner-actions">
+                  {primaryConfig && (
+                    <button
+                      className={`action-cta ${primaryConfig.color}`}
+                      onClick={() => handleAction(primaryAction)}
+                      disabled={acting !== null}
+                    >
+                      <PrimaryIcon size={18} />
+                      <span>{primaryConfig.label}</span>
+                    </button>
+                  )}
+                  <div className="action-secondary-row">
+                    {Object.entries(ACTION_CONFIG).filter(([key]) => key !== primaryAction).map(([key, config]) => {
+                      const Icon = config.icon;
+                      return (
+                        <button
+                          key={key}
+                          className={`action-secondary ${config.color} ${suggested.includes(key) ? 'suggested' : ''}`}
+                          onClick={() => handleAction(key)}
+                          disabled={acting !== null}
+                          title={config.desc}
+                        >
+                          <Icon size={16} />
+                          <span>{config.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {showActionNote && (
+                <div className="action-note-input">
+                  <textarea
+                    placeholder={selectedAction === 'reply' ? 'Draft your reply notes…' : 'When should you follow up?'}
+                    value={actionNote}
+                    onChange={(e) => setActionNote(e.target.value)}
+                    rows={2}
+                  />
+                  <div className="action-note-btns">
+                    <button className="btn btn-secondary btn-sm" onClick={() => { setShowActionNote(false); setSelectedAction(null); setActionNote(''); }}>Cancel</button>
+                    <button className="btn btn-primary btn-sm" onClick={() => executeAction(selectedAction, actionNote)} disabled={acting !== null}>Confirm</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {editing ? (
           <div className="edit-fields">
@@ -412,8 +556,6 @@ export default function MailDetail() {
           </div>
         </div>
       )}
-
-      <ActionPanel item={item} onUpdate={setItem} hidden={item.readOnly} />
 
       {showSepa && (
         <SepaPayModal item={item} sepaFields={sepaFields} onClose={() => setShowSepa(false)} />

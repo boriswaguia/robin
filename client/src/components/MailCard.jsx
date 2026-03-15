@@ -1,5 +1,14 @@
 import { getCategoryColor, getCategoryIcon, formatDate } from '../utils';
-import { Loader2, AlertCircle, ShieldX, Mic } from 'lucide-react';
+import { Loader2, AlertCircle, ShieldX, Mic, AlertTriangle, CheckCircle2, Archive, Reply, CreditCard, CalendarClock, Trash2, Star } from 'lucide-react';
+
+const ACTION_LABELS = {
+  archive: { label: 'Archive', icon: Archive },
+  reply: { label: 'Reply', icon: Reply },
+  pay_bill: { label: 'Pay Bill', icon: CreditCard },
+  schedule_followup: { label: 'Follow Up', icon: CalendarClock },
+  discard: { label: 'Discard', icon: Trash2 },
+  mark_important: { label: 'Important', icon: Star },
+};
 
 export default function MailCard({ item, sharedBy }) {
   const isProcessing = item.status === 'processing';
@@ -51,8 +60,14 @@ export default function MailCard({ item, sharedBy }) {
     );
   }
 
+  const suggested = item.suggestedActions || [];
+  const primaryAction = suggested[0];
+  const primaryLabel = primaryAction ? ACTION_LABELS[primaryAction] : null;
+  const isActionTaken = item.status !== 'new' && item.status !== 'processing' && item.status !== 'error' && item.status !== 'rejected';
+  const PrimaryIcon = primaryLabel?.icon;
+
   return (
-    <div className={`mail-card ${item.status === 'new' ? 'new' : ''}`}>
+    <div className={`mail-card ${item.status === 'new' ? 'new' : ''} ${suggested.length > 0 && !isActionTaken ? (item.urgency === 'high' ? 'needs-action-urgent' : 'needs-action') : ''}`}>
       <div className="mail-card-top">
         <span className={`category-badge ${getCategoryColor(item.category)}`}>
           {getCategoryIcon(item.category)} {item.category}
@@ -61,12 +76,31 @@ export default function MailCard({ item, sharedBy }) {
         {item.source === 'voice' && <span className="source-badge voice"><Mic size={11} /> Voice</span>}
         {sharedBy && <span className="source-badge shared">via {sharedBy.name}</span>}
         {item.urgency === 'high' && <span className="urgency-badge">Urgent</span>}
-        {item.status !== 'new' && <span className="status-badge">{item.actionTaken?.replace('_', ' ') || item.status}</span>}
+        {isActionTaken && <span className="status-badge">{item.actionTaken?.replace('_', ' ') || item.status}</span>}
       </div>
       <div className="mail-card-body">
         <h4>{item.sender || 'Unknown Sender'}</h4>
         <p>{item.summary}</p>
       </div>
+      {!isActionTaken && primaryLabel && (
+        <div className="mail-card-action-hint">
+          <AlertTriangle size={13} />
+          <span>{primaryLabel.label}</span>
+          {item.dueDate && (() => {
+            const diffDays = Math.ceil((new Date(item.dueDate) - new Date()) / 86400000);
+            if (diffDays < 0) return <span className="hint-due overdue">{Math.abs(diffDays)}d overdue</span>;
+            if (diffDays === 0) return <span className="hint-due overdue">Today</span>;
+            if (diffDays <= 7) return <span className="hint-due">{diffDays}d left</span>;
+            return null;
+          })()}
+        </div>
+      )}
+      {isActionTaken && (
+        <div className="mail-card-action-hint done">
+          <CheckCircle2 size={13} />
+          <span>{ACTION_LABELS[item.actionTaken]?.label || item.actionTaken?.replace('_', ' ')}</span>
+        </div>
+      )}
       <div className="mail-card-footer">
         {item.amountDue && <span className="amount">{item.amountDue}</span>}
         <span className="date">{formatDate(item.createdAt)}</span>
