@@ -23,6 +23,25 @@ export async function scanMail(files) {
   return res.json();
 }
 
+export async function submitVoiceMemo(audioBlob, mimeType = 'audio/webm') {
+  const formData = new FormData();
+  const ext = mimeType.split('/')[1]?.split(';')[0] || 'webm';
+  formData.append('audio', audioBlob, `voice-memo.${ext}`);
+
+  const res = await fetch(`${API_BASE}/voice`, {
+    method: 'POST',
+    ...OPTS,
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Upload failed' }));
+    throw new Error(err.error || 'Failed to analyze voice memo');
+  }
+
+  return res.json();
+}
+
 export async function getAllMail() {
   const res = await fetch(API_BASE, OPTS);
   if (!res.ok) throw new Error('Failed to fetch mail');

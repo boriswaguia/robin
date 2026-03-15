@@ -9,6 +9,7 @@ export function getCategoryColor(category) {
     financial: 'cat-green',
     advertisement: 'cat-gray',
     subscription: 'cat-purple',
+    reminder: 'cat-indigo',
     tax: 'cat-yellow',
     other: 'cat-gray',
   };
@@ -26,6 +27,7 @@ export function getCategoryIcon(category) {
     financial: '🏦',
     advertisement: '📢',
     subscription: '📰',
+    reminder: '🎙️',
     tax: '🧾',
     other: '📄',
   };

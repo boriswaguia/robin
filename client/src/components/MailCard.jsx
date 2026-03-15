@@ -1,5 +1,5 @@
 import { getCategoryColor, getCategoryIcon, formatDate } from '../utils';
-import { Loader2, AlertCircle, ShieldX } from 'lucide-react';
+import { Loader2, AlertCircle, ShieldX, Mic } from 'lucide-react';
 
 export default function MailCard({ item, sharedBy }) {
   const isProcessing = item.status === 'processing';
@@ -58,6 +58,7 @@ export default function MailCard({ item, sharedBy }) {
           {getCategoryIcon(item.category)} {item.category}
         </span>
         {item.source === 'gmail' && <span className="source-badge gmail">Gmail</span>}
+        {item.source === 'voice' && <span className="source-badge voice"><Mic size={11} /> Voice</span>}
         {sharedBy && <span className="source-badge shared">via {sharedBy.name}</span>}
         {item.urgency === 'high' && <span className="urgency-badge">Urgent</span>}
         {item.status !== 'new' && <span className="status-badge">{item.actionTaken?.replace('_', ' ') || item.status}</span>}

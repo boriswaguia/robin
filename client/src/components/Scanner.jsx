@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, Upload, Loader2, X, ImagePlus, FileText, Clipboard, Plus } from 'lucide-react';
+import { Camera, Upload, Loader2, X, ImagePlus, FileText, Clipboard, Plus, Mic } from 'lucide-react';
 import { scanMail } from '../services/api';
+import VoiceRecorder from './VoiceRecorder';
 
 export default function Scanner() {
+  const [mode, setMode] = useState('scan'); // 'scan' | 'voice'
   const [pages, setPages] = useState([]); // Array of { file, preview }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -85,6 +87,27 @@ export default function Scanner() {
   return (
     <div className="scanner">
       <h2>Scan Your Mail</h2>
+
+      {/* Mode toggle */}
+      <div className="scanner-mode-tabs">
+        <button
+          className={`scanner-mode-tab ${mode === 'scan' ? 'active' : ''}`}
+          onClick={() => setMode('scan')}
+        >
+          <ImagePlus size={16} /> Document Scan
+        </button>
+        <button
+          className={`scanner-mode-tab ${mode === 'voice' ? 'active' : ''}`}
+          onClick={() => setMode('voice')}
+        >
+          <Mic size={16} /> Voice Reminder
+        </button>
+      </div>
+
+      {mode === 'voice' ? (
+        <VoiceRecorder />
+      ) : (
+        <>
       <p className="subtitle">
         {hasPages
           ? `${pages.length} page${pages.length > 1 ? 's' : ''} added — add more or scan now`
@@ -196,6 +219,8 @@ export default function Scanner() {
       </div>
 
       {error && <div className="error-message">{error}</div>}
+        </>
+      )}
     </div>
   );
 }

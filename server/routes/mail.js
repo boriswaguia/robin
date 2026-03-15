@@ -5,7 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuid } from 'uuid';
 import prisma from '../services/db.js';
-import { analyzeMail, findRelatedMail } from '../services/ai.js';
+import { analyzeMail, findRelatedMail, analyzeVoice } from '../services/ai.js';
 import { getAllMail, getMailById, saveMail, updateMail, deleteMail, getRelatedMail, searchMail, getContacts, getMailByContact, getDueReminders } from '../services/storage.js';
 import { authenticate } from '../middleware/auth.js';
 import { encryptBuffer, isEncryptionEnabled } from '../services/crypto.js';
@@ -286,6 +286,53 @@ router.delete('/:id', async (req, res) => {
 
   await deleteMail(req.params.id, req.user.id);
   res.json({ success: true });
+});
+
+// ─── Voice Reminder ──────────────────────────────────────────────────────────
+
+// In-memory storage — audio is processed and discarded, never written to disk
+const audioUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25 MB max
+  fileFilter: (_req, file, cb) => {
+    const allowed = /webm|ogg|mp4|m4a|wav|mpeg|mp3/;
+    cb(null, allowed.test(file.mimetype) || allowed.test(path.extname(file.originalname).toLowerCase()));
+  },
+});
+
+// POST /api/mail/voice — record a voice memo and convert it to a reminder
+router.post('/voice', audioUpload.single('audio'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No audio file provided' });
+
+    const mimeType = req.file.mimetype || 'audio/webm';
+    const analysis = await analyzeVoice(req.file.buffer, mimeType);
+
+    const mailItem = await saveMail({
+      userId: req.user.id,
+      imageUrl: null,
+      imageUrls: [],
+      status: 'done',
+      extractedText: analysis.transcription || '',
+      summary: analysis.summary || 'Voice reminder',
+      sender: 'Voice Memo',
+      receiver: null,
+      category: 'reminder',
+      urgency: analysis.urgency || 'medium',
+      dueDate: analysis.dueDate || null,
+      amountDue: analysis.amountDue || null,
+      suggestedActions: ['schedule_followup', 'archive'],
+      keyDetails: analysis.keyDetails || [],
+      actionableInfo: analysis.actionableInfo || [],
+      paymentDetails: null,
+      source: 'voice',
+    });
+
+    res.status(201).json(mailItem);
+  } catch (err) {
+    console.error('Voice analysis error:', err);
+    res.status(500).json({ error: err.message || 'Failed to analyze voice memo' });
+  }
 });
 
 export { router as mailRouter };

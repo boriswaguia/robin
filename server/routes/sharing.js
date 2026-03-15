@@ -239,7 +239,7 @@ router.patch('/:id/categories', async (req, res) => {
   const { categories } = req.body; // [] to clear, ['bill','medical'] to set
   if (!Array.isArray(categories)) return res.status(400).json({ error: 'categories must be an array' });
 
-  const VALID_CATEGORIES = ['bill', 'government', 'legal', 'medical', 'insurance', 'financial', 'tax', 'personal', 'subscription', 'other'];
+  const VALID_CATEGORIES = ['bill', 'government', 'legal', 'medical', 'insurance', 'financial', 'tax', 'personal', 'subscription', 'reminder', 'other'];
   const invalid = categories.filter((c) => !VALID_CATEGORIES.includes(c));
   if (invalid.length > 0) return res.status(400).json({ error: `Invalid categories: ${invalid.join(', ')}` });
 

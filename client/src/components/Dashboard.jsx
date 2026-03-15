@@ -184,7 +184,7 @@ export default function Dashboard() {
 
       {mail.length > 0 && (
         <div className="filter-bar">
-          {['all', 'action_needed', 'bill', 'personal', 'government', 'financial', 'medical'].map((f) => (
+          {['all', 'action_needed', 'bill', 'personal', 'government', 'financial', 'medical', 'reminder'].map((f) => (
             <button
               key={f}
               className={`filter-chip ${filter === f ? 'active' : ''}`}

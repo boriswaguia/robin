@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, FileText, Image, CalendarPlus, ClipboardList, Copy, Check, Link2, Landmark, Pencil, Save, X, Bell, BellOff, ChevronLeft, ChevronRight, Share2, Users } from 'lucide-react';
+import { ArrowLeft, Trash2, FileText, Image, CalendarPlus, ClipboardList, Copy, Check, Link2, Landmark, Pencil, Save, X, Bell, BellOff, ChevronLeft, ChevronRight, Share2, Users, Mic } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getMailById, deleteMailItem, editMail, setReminder, getSharingConnections, getMailShares, toggleMailShare } from '../services/api';
 import { getCategoryColor, getCategoryIcon, formatDate } from '../utils';
@@ -9,7 +9,7 @@ import { extractSepaFields } from '../services/sepa';
 import SepaPayModal from './SepaPayModal';
 import ActionPanel from './ActionPanel';
 
-const CATEGORIES = ['bill', 'personal', 'government', 'legal', 'medical', 'insurance', 'financial', 'advertisement', 'subscription', 'tax', 'other'];
+const CATEGORIES = ['bill', 'personal', 'government', 'legal', 'medical', 'insurance', 'financial', 'advertisement', 'subscription', 'reminder', 'tax', 'other'];
 const URGENCIES = ['low', 'medium', 'high'];
 
 export default function MailDetail() {
@@ -222,6 +222,8 @@ export default function MailDetail() {
               </span>
               {item.urgency === 'high' && <span className="urgency-badge">Urgent</span>}
               {item.urgency === 'medium' && <span className="urgency-badge medium">Medium</span>}
+              {item.source === 'gmail' && <span className="source-badge gmail">Gmail</span>}
+              {item.source === 'voice' && <span className="source-badge voice"><Mic size={11} /> Voice</span>}
             </>
           )}
         </div>
