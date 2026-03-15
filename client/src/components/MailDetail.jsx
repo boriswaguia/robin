@@ -505,7 +505,7 @@ export default function MailDetail() {
             <h4>Key Details</h4>
             <ul>
               {item.keyDetails.map((d, i) => (
-                <li key={i}>{d}</li>
+                <li key={i}><Linkified text={d} /></li>
               ))}
             </ul>
           </div>
@@ -689,6 +689,30 @@ export default function MailDetail() {
   );
 }
 
+/** Render a text value with clickable emails and phone numbers */
+function Linkified({ text }) {
+  if (!text) return null;
+  // Match emails and phone numbers (intl and local formats)
+  const pattern = /([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})|(\+?[\d][\d\s\-/().]{6,}\d)/g;
+  const parts = [];
+  let last = 0;
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > last) parts.push(text.slice(last, match.index));
+    if (match[1]) {
+      // Email
+      parts.push(<a key={match.index} href={`mailto:${match[1]}`} className="inline-link">{match[1]}</a>);
+    } else if (match[2]) {
+      // Phone — strip formatting for the tel: href
+      const digits = match[2].replace(/[^\d+]/g, '');
+      parts.push(<a key={match.index} href={`tel:${digits}`} className="inline-link">{match[2]}</a>);
+    }
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts.length > 0 ? <>{parts}</> : <>{text}</>;
+}
+
 function ActionableRow({ label, value, copyable, field, copiedField, setCopiedField }) {
   function handleCopy() {
     navigator.clipboard.writeText(value);
@@ -699,7 +723,7 @@ function ActionableRow({ label, value, copyable, field, copiedField, setCopiedFi
   return (
     <div className="actionable-row">
       <span className="actionable-label">{label}</span>
-      <span className="actionable-value">{value}</span>
+      <span className="actionable-value"><Linkified text={value} /></span>
       {copyable && (
         <button className="copy-btn" onClick={handleCopy} title="Copy">
           {isCopied ? <Check size={14} /> : <Copy size={14} />}

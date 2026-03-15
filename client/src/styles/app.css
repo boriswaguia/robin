@@ -1151,6 +1151,15 @@ ul { list-style: none; }
   word-break: break-all;
 }
 
+.inline-link {
+  color: var(--primary);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--primary);
+}
+.inline-link:hover {
+  opacity: 0.8;
+}
+
 /* ── Related Mail Timeline ──────────────────────────────────────────────────────── */
 .related-mail {
   margin-top: 16px;
