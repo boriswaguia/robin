@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Trash2, FileText, Image, CalendarPlus, ClipboardList, Copy, Check, Link2, Landmark, Pencil, Save, X, Bell, BellOff, ChevronLeft, ChevronRight, Share2, Users, Mic, AlertTriangle, CheckCircle2, Clock, Archive, Reply, CreditCard, CalendarClock, Star, RefreshCw } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { getMailById, deleteMailItem, editMail, setReminder, performAction, rescanMail, getSharingConnections, getMailShares, toggleMailShare } from '../services/api';
 import { getCategoryColor, getCategoryIcon, formatDate } from '../utils';
 import { downloadCalendarEvent } from '../services/calendar';
@@ -88,7 +87,12 @@ export default function MailDetail() {
   async function handleDelete() {
     if (!confirm('Delete this mail item?')) return;
     await deleteMailItem(id);
-    navigate('/');
+    // Go back to wherever the user came from, fallback to Dashboard
+    if (window.history.length > 2) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
   }
 
   function startEditing() {

@@ -156,12 +156,12 @@ export async function getAgendaItems(userId) {
   const weekEnd = new Date(today);
   weekEnd.setDate(weekEnd.getDate() + 7);
 
-  // Fetch all non-processing mail that has a dueDate and hasn't been fully resolved
+  // Fetch mail with a dueDate that still needs action
   const items = await prisma.mail.findMany({
     where: {
       userId,
       dueDate: { not: null },
-      status: { notIn: ['processing', 'error', 'rejected'] },
+      status: 'new', // only items that haven't been actioned yet
     },
     orderBy: { dueDate: 'asc' },
   });
