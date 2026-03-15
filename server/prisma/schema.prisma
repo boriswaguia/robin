@@ -24,6 +24,7 @@ model User {
   sharingFrom       ShareConnection[] @relation("SharingFrom")
   sharingTo         ShareConnection[] @relation("SharingTo")
   pushSubscriptions PushSubscription[]
+  gmailSyncs        GmailSync[]
 }
 
 model Mail {
@@ -126,5 +127,21 @@ model PushSubscription {
   createdAt DateTime @default(now())
 
   @@unique([userId, endpoint])
+  @@index([userId])
+}
+
+// Track Gmail sync history and in-progress state
+model GmailSync {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      String   @default("in_progress") // in_progress | completed | error
+  scanned     Int      @default(0)   // emails checked
+  skipped     Int      @default(0)   // already synced (duplicates)
+  found       Int      @default(0)   // actionable items imported
+  error       String?                // error message if status=error
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+
   @@index([userId])
 }

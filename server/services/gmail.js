@@ -286,19 +286,42 @@ async function analyzeGmailItem(mailId, userId, attachmentPaths, emailBody, subj
 
 const activeSyncs = new Set();
 
+/** Check if a sync is currently running for a user */
+export function isSyncActive(userId) {
+  return activeSyncs.has(userId);
+}
+
 // ── Main sync function ───────────────────────────────────────────────────────
 
 export async function syncGmail(userId) {
   if (activeSyncs.has(userId)) throw new Error('Sync already in progress');
   activeSyncs.add(userId);
+
+  // Create a sync record to track progress
+  const syncRecord = await prisma.gmailSync.create({
+    data: { userId, status: 'in_progress' },
+  });
+
   try {
-    return await _doSync(userId);
+    const result = await _doSync(userId, syncRecord.id);
+    // Mark sync as completed with final counts
+    await prisma.gmailSync.update({
+      where: { id: syncRecord.id },
+      data: { status: 'completed', completedAt: new Date(), ...result },
+    });
+    return result;
+  } catch (err) {
+    await prisma.gmailSync.update({
+      where: { id: syncRecord.id },
+      data: { status: 'error', completedAt: new Date(), error: err.message },
+    }).catch(() => {});
+    throw err;
   } finally {
     activeSyncs.delete(userId);
   }
 }
 
-async function _doSync(userId) {
+async function _doSync(userId, syncId) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user?.gmailRefreshToken) throw new Error('Gmail not connected');
 
@@ -326,6 +349,14 @@ async function _doSync(userId) {
       // Fetch full message
       const { data: msg } = await gmail.users.messages.get({ userId: 'me', id, format: 'full' });
       scanned++;
+
+      // Update live counts periodically (every 5 messages)
+      if (scanned % 5 === 0) {
+        await prisma.gmailSync.update({
+          where: { id: syncId },
+          data: { scanned, skipped, found },
+        }).catch(() => {});
+      }
 
       // Tier 1
       if (!passesTier1(msg)) continue;

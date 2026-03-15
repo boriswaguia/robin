@@ -16,6 +16,13 @@ async function fetchGmailStatus() {
   return res.json();
 }
 
+async function fetchSyncStatus() {
+  const res = await fetch('/api/gmail/sync-status', { credentials: 'include' });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.sync; // { status, scanned, skipped, found, error, ... } or null
+}
+
 async function syncGmail() {
   const res = await fetch('/api/gmail/sync', { method: 'POST', credentials: 'include' });
   const data = await res.json();
@@ -101,11 +108,46 @@ export default function Integrations() {
   useEffect(() => { loadSharing(); }, []);
 
   // ── Gmail handlers ─────────────────────────────────────────────────────────
+  const syncPollRef = useRef(null);
+
+  // Load latest sync status on mount (show last result)
+  useEffect(() => {
+    if (!gmail?.connected) return;
+    fetchSyncStatus().then((s) => {
+      if (!s) return;
+      if (s.status === 'in_progress') {
+        setSyncing(true);
+        startSyncPolling();
+      } else {
+        setSyncResult(s);
+      }
+    });
+    return () => clearInterval(syncPollRef.current);
+  }, [gmail?.connected]);
+
+  function startSyncPolling() {
+    clearInterval(syncPollRef.current);
+    syncPollRef.current = setInterval(async () => {
+      const s = await fetchSyncStatus();
+      if (!s) return;
+      if (s.status !== 'in_progress') {
+        clearInterval(syncPollRef.current);
+        setSyncing(false);
+        setSyncResult(s);
+      } else {
+        // Update live progress counts
+        setSyncResult(s);
+      }
+    }, 2500);
+  }
+
   async function handleSync() {
     setSyncing(true); setSyncResult(null); setGmailError(null);
-    try { setSyncResult(await syncGmail()); }
-    catch (err) { setGmailError(err.message); }
-    finally { setSyncing(false); }
+    try {
+      await syncGmail();
+      startSyncPolling();
+    }
+    catch (err) { setGmailError(err.message); setSyncing(false); }
   }
 
   async function handleGmailDisconnect() {
@@ -219,18 +261,20 @@ export default function Integrations() {
                 <li>Results appear in your Dashboard alongside scanned mail</li>
               </ul>
             </div>
-            {syncResult && (
+            {syncResult && syncResult.status === 'completed' && (
               <div className="sync-result">
                 <CheckCircle size={16} />
-                <span>
-                  Checked <strong>{syncResult.scanned}</strong> new email{syncResult.scanned !== 1 ? 's' : ''}
-                  {syncResult.skipped > 0 && <> ({syncResult.skipped} already synced)</>}
-                  {' — '}
-                  {syncResult.found === 0
-                    ? 'nothing new needs your attention.'
-                    : <><strong>{syncResult.found}</strong> item{syncResult.found > 1 ? 's' : ''} added to your inbox.</>}
-                </span>
+                <span>Checked {syncResult.scanned} email{syncResult.scanned !== 1 ? 's' : ''}, imported {syncResult.found} item{syncResult.found !== 1 ? 's' : ''}.</span>
               </div>
+            )}
+            {syncResult && syncResult.status === 'in_progress' && (
+              <div className="sync-result syncing">
+                <Loader2 size={16} className="spin" />
+                <span>Syncing… {syncResult.scanned > 0 ? `${syncResult.scanned} checked so far` : 'starting'}</span>
+              </div>
+            )}
+            {syncResult && syncResult.status === 'error' && (
+              <div className="error-message"><XCircle size={16} /> Sync failed: {syncResult.error || 'Unknown error'}</div>
             )}
             {gmailError && <div className="error-message"><XCircle size={16} /> {gmailError}</div>}
             <div className="integration-actions">

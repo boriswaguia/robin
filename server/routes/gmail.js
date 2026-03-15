@@ -4,7 +4,7 @@ import { google } from 'googleapis';
 import { authenticate } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
 import prisma from '../services/db.js';
-import { getAuthUrl, exchangeCode, syncGmail } from '../services/gmail.js';
+import { getAuthUrl, exchangeCode, syncGmail, isSyncActive } from '../services/gmail.js';
 
 const router = express.Router();
 
@@ -98,7 +98,7 @@ router.get('/status', authenticate, async (req, res) => {
   });
 });
 
-// POST /api/gmail/sync — pull and process new actionable emails
+// POST /api/gmail/sync — kick off background sync, return immediately
 router.post('/sync', authenticate, async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user.id },
@@ -109,32 +109,28 @@ router.post('/sync', authenticate, async (req, res) => {
     return res.status(400).json({ error: 'Gmail is not connected' });
   }
 
-  try {
-    const result = await syncGmail(req.user.id);
-    res.json(result); // { scanned, skipped, found }
-  } catch (err) {
-    if (err.message === 'Sync already in progress') {
-      return res.status(409).json({ error: 'A sync is already in progress. Please wait.' });
-    }
-    // Detect insufficient scopes — user needs to disconnect and reconnect
-    if (err.code === 403 || err.status === 403 || /insufficient.*scop/i.test(err.message)) {
-      console.error('Gmail scope error — user needs to reconnect:', err.message);
-      return res.status(403).json({
-        error: 'Gmail permissions are outdated. Please disconnect and reconnect your Gmail account.',
-        reconnect: true,
-      });
-    }
-    // Detect revoked/expired refresh token
-    if (err.code === 401 || err.status === 401 || /invalid_grant|token.*revoked|token.*expired/i.test(err.message)) {
-      console.error('Gmail token expired/revoked:', err.message);
-      return res.status(401).json({
-        error: 'Gmail access has expired. Please disconnect and reconnect your Gmail account.',
-        reconnect: true,
-      });
-    }
-    console.error('Gmail sync error:', err.message);
-    res.status(500).json({ error: 'Sync failed' });
+  // Check if sync is already running for this user
+  if (isSyncActive(req.user.id)) {
+    return res.status(409).json({ error: 'A sync is already in progress. Please wait.' });
   }
+
+  // Fire-and-forget — process emails in background
+  syncGmail(req.user.id).catch((err) => {
+    console.error('Background Gmail sync error:', err.message);
+  });
+
+  // Return immediately — client will see 'processing' items via Dashboard polling
+  res.status(202).json({ started: true, message: 'Sync started. New emails will appear shortly.' });
+});
+
+// GET /api/gmail/sync-status — return latest sync record (or in-progress one)
+router.get('/sync-status', authenticate, async (req, res) => {
+  const sync = await prisma.gmailSync.findFirst({
+    where: { userId: req.user.id },
+    orderBy: { startedAt: 'desc' },
+    select: { id: true, status: true, scanned: true, skipped: true, found: true, error: true, startedAt: true, completedAt: true },
+  });
+  res.json({ sync });
 });
 
 // DELETE /api/gmail/disconnect — revoke and clear tokens
