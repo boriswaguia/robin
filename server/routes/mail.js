@@ -65,7 +65,8 @@ router.post('/scan', upload.array('images', 10), async (req, res) => {
 
     // Fire-and-forget: process in background
     processMailAsync(mailItem.id, req.user.id, imagePaths).catch((err) => {
-      console.error(`Background processing failed for mail ${mailItem.id}:`, err);
+      // SECURITY: Only log the message, not the full error (may contain extracted document content)
+      console.error(`Background processing failed for mail ${mailItem.id}:`, err.message);
     });
 
     // Return immediately — client will poll for updates

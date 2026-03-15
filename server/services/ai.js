@@ -194,7 +194,8 @@ export async function analyzeMail(imagePaths) {
   try {
     parsed = JSON.parse(content);
   } catch (e) {
-    console.error('Gemini raw response:', content);
+    // SECURITY: Never log the raw response — it may contain sensitive PII from user documents
+    console.error('Gemini returned invalid JSON (raw response not logged for security)');
     throw new Error(`Gemini returned invalid JSON: ${e.message}`);
   }
 

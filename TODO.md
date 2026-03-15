@@ -68,6 +68,97 @@ docker compose up -d
 
 ---
 
+## 1.5 Submit App to Google for OAuth Verification
+
+While in **Testing** mode, only explicitly added test users can connect Gmail. To allow any user to connect, the app must pass Google's OAuth verification review.
+
+### Prerequisites (all completed ✅)
+
+- [x] **No sensitive email data in server logs** — all `console.error` calls sanitized to log only error messages, never email content, tokens, or Gemini raw responses
+- [x] **Gmail OAuth tokens encrypted at rest** — `gmailAccessToken` and `gmailRefreshToken` are now encrypted via AES-256-GCM through the Prisma middleware (db.js)
+- [x] **DSGVO/GDPR-compliant consent screen** — expanded to cover Gmail-specific data processing, AI pre-filtering, automated decision-making (Art. 22), data transfer outside EEA, and explicit mention of all scopes
+- [x] **Consent version bumped to 1.1** — existing users will be prompted to re-accept updated terms
+- [x] **Data export and deletion** — GDPR rights (access, rectify, erase, portability) fully implemented
+- [x] **Minimal scopes** — only `gmail.readonly` and `userinfo.email` requested
+- [x] **No email sending/modifying** — app uses read-only access
+
+### Step-by-step: Google OAuth Verification Submission
+
+1. **Deploy production build** with all security fixes applied:
+   ```bash
+   docker compose up -d --build
+   ```
+
+2. **Set up HTTPS** (required for verification):
+   - Configure Caddy or Certbot + Nginx for TLS (see `docs/aws-lightsail.md` Section 5)
+   - Update `GOOGLE_REDIRECT_URI` to `https://robin.briskprototyping.com/api/gmail/callback`
+   - Google will not approve apps using HTTP
+
+3. **Prepare a public-facing privacy policy page**:
+   - Host the privacy policy at a publicly accessible URL (e.g. `https://robin.briskprototyping.com/privacy`)
+   - It must be accessible **without authentication**
+   - Must clearly describe: what data is collected, how it's used, how it's shared, how users can delete their data
+   - The consent screen text in `ConsentScreen.jsx` covers all required content — create a standalone HTML page from it
+
+4. **Prepare a public-facing homepage**:
+   - Google requires a homepage URL that explains what the app does
+   - Can be a simple landing page at `https://robin.briskprototyping.com/` or a dedicated page
+
+5. **Record a demo video** (required by Google):
+   - Show the OAuth flow from start to finish
+   - Show the user clicking "Connect Gmail" → Google consent screen → redirect back to app
+   - Show what the app does with the data (email sync, analysis results in dashboard)
+   - Show how users can disconnect Gmail and delete their account
+   - Upload to YouTube as unlisted (2-5 minutes)
+
+6. **Go to Google Cloud Console → OAuth consent screen**:
+   - Fill in all fields:
+     - **App name**: Robin
+     - **User support email**: your contact email
+     - **App logo**: upload your app icon (at least 120x120px)
+     - **Application homepage link**: `https://robin.briskprototyping.com`
+     - **Application privacy policy link**: `https://robin.briskprototyping.com/privacy`
+     - **Application terms of service link**: `https://robin.briskprototyping.com/terms` (can be same as privacy page)
+     - **Authorized domains**: `briskprototyping.com`
+     - **Developer contact email**: your email
+
+7. **Verify scopes**:
+   - Ensure only these scopes are listed:
+     - `https://www.googleapis.com/auth/gmail.readonly`
+     - `https://www.googleapis.com/auth/userinfo.email`
+   - `gmail.readonly` is a **restricted scope** — this triggers a more thorough review
+
+8. **Submit for verification**:
+   - Click **"Publish App"** to move from Testing to In Production
+   - Google will show a "Verification required" banner — click **"Prepare for verification"**
+   - Fill in the form:
+     - Explain why you need each scope
+     - For `gmail.readonly`: *"Robin reads the user's inbox (last 7 days only) to identify actionable correspondence such as bills, appointments, and legal notices. It uses AI to extract structured data like due dates and amounts. Robin does not send, modify, or delete any emails. Users can disconnect Gmail at any time."*
+     - Provide the YouTube demo video link
+     - Provide the privacy policy URL
+   - Submit
+
+9. **Respond to Google's review**:
+   - Google may request a **security assessment** (CASA Tier 2) for restricted scopes like `gmail.readonly`
+   - This involves a third-party security audit — budget ~$4,500–$15,000 USD and 4-8 weeks
+   - Alternatively, if your app has fewer than 100 users, you may qualify for a **self-assessment** (free)
+   - Google may also ask clarifying questions — respond promptly
+
+10. **After approval**:
+    - The "unverified app" warning screen is removed
+    - Any Google user can connect their Gmail to Robin
+    - Keep the privacy policy and homepage URLs active permanently
+    - If you change scopes, you must re-verify
+
+### Important Notes
+
+- **Restricted scopes require CASA security assessment**: `gmail.readonly` is classified as a restricted scope. Google requires either a self-assessment or a third-party CASA (Cloud Application Security Assessment). For apps with fewer than 100 users, self-assessment may be available.
+- **Timeline**: The review typically takes 4-6 weeks. If a security assessment is required, add another 4-8 weeks.
+- **Keep test users**: Until verification is complete, keep your Gmail address listed as a test user so you can continue developing.
+- **Annual re-verification**: Google may require periodic re-verification for restricted scopes.
+
+---
+
 ## 2. Immediate: Update Deployment Docs
 
 The `docs/deployment.md` prerequisites and environment variables table still references:
@@ -120,12 +211,10 @@ No logging of auth events (login, failed login, logout). Useful for detecting co
 
 **Status:** Not started. Low priority for now.
 
-### 4.4 Gmail Token Encryption at Rest — Recommended
-`gmailAccessToken` and `gmailRefreshToken` are stored in plaintext in the database. If the DB is ever dumped, these tokens expose the user's Gmail read access.
+### 4.4 Gmail Token Encryption at Rest — ✅ Done
+`gmailAccessToken` and `gmailRefreshToken` are now encrypted at rest using AES-256-GCM via the Prisma middleware in `server/services/db.js`. The encryption is transparent — tokens are encrypted before writing to the DB and decrypted after reading.
 
-Consider encrypting them with a server-side key (e.g. using Node's `crypto.createCipheriv`) before persisting.
-
-**Status:** Not started.
+**Status:** Completed (March 2026).
 
 ---
 

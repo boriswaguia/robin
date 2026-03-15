@@ -70,7 +70,8 @@ router.get('/callback', authLimiter, async (req, res) => {
 
     res.redirect('/integrations?connected=true');
   } catch (err) {
-    console.error('Gmail OAuth callback error:', err);
+    // SECURITY: Only log the message, not the full error (may contain tokens/PII)
+    console.error('Gmail OAuth callback error:', err.message);
     res.redirect(`/integrations?error=${encodeURIComponent(err.message)}`);
   }
 });

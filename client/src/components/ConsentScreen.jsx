@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Shield, FileText, Download, Trash2, Loader2, AlertTriangle } from 'lucide-react';
 
-const TERMS_VERSION = '1.0';
+const TERMS_VERSION = '1.1';
 
 const TERMS_TEXT = `
 ## Terms of Use & Privacy Notice
 **Version ${TERMS_VERSION} — Last updated: March 2026**
 
 ### 1. Service Description
-Robin ("the App") is a personal mail scanning and management tool. It uses AI (Google Gemini) to analyze images of your mail and extract structured information.
+Robin ("the App") is a personal mail scanning and management tool. It uses AI (Google Gemini) to analyze images of your mail and email content to extract structured information such as due dates, amounts, sender details, and suggested actions.
 
 ### 2. Disclaimer of Liability
 THE APP IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. THE DEVELOPER(S) AND OPERATOR(S) OF THIS APPLICATION:
@@ -20,14 +20,14 @@ THE APP IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. TH
 
 You use this application entirely at your own risk.
 
-### 3. Data Processing & Privacy (GDPR)
-We process your personal data in accordance with the EU General Data Protection Regulation (GDPR):
+### 3. Data Processing & Privacy (DSGVO / GDPR)
+We process your personal data in accordance with the EU General Data Protection Regulation (GDPR / DSGVO):
 
 **What data we collect:**
 - Account information (name, email, hashed password)
 - Scanned mail images and extracted text
-- AI-generated analysis (summaries, categories, extracted fields)
-- Gmail data (if you connect Gmail — read-only access)
+- AI-generated analysis (summaries, categories, extracted fields such as IBANs, reference numbers, addresses, amounts)
+- Gmail data (if you connect Gmail — see Section 3a below)
 - Sharing connections with other users
 
 **Legal basis for processing:**
@@ -36,30 +36,81 @@ We process your personal data in accordance with the EU General Data Protection 
 
 **How we process your data:**
 - Mail images are analyzed by Google Gemini AI to extract text and structured data
-- Data is encrypted at rest using AES-256-GCM encryption
+- All personal data fields (extracted text, summaries, sender/receiver info, financial details) are encrypted at rest using AES-256-GCM encryption
+- Gmail OAuth tokens are encrypted at rest using AES-256-GCM encryption
+- Uploaded files (images, PDFs) are encrypted on disk using AES-256-GCM
 - Passwords are hashed with bcrypt (cost factor 12)
 - Sessions use httpOnly, Secure, SameSite=Strict cookies
+- No email content, user data, or analysis results are written to application logs
 
 **Third-party data sharing:**
-- **Google Gemini API**: Your mail images and email text are sent to Google's AI service for analysis. Google's privacy policy applies to this processing.
-- **No other third parties** receive your data.
+- **Google Gemini API**: Your mail images, scanned document images, and email text content are sent to Google's Gemini AI service for analysis. This includes the full text body of emails (up to 8,000 characters), email subject lines, sender information, and any attached PDF or image files. Google processes this data under their Data Processing Terms. Google's privacy policy applies: https://policies.google.com/privacy
+- **No other third parties** receive your data. We do not sell, share, or transfer your data to advertisers, data brokers, or any other entity.
 
-### 4. Your Rights (GDPR Articles 15–22)
+### 3a. Gmail Integration — Specific Data Processing
+If you choose to connect your Gmail account, the following additional processing occurs:
+
+**Gmail permissions (OAuth scopes) requested:**
+- **gmail.readonly** — read-only access to your Gmail messages (Robin cannot send, delete, or modify your emails)
+- **userinfo.email** — to identify which Gmail account is connected
+
+**How Gmail data is processed:**
+- Robin scans your inbox for the last 7 days
+- **Tier 1 (local filter):** Newsletters, promotions, social, and forum emails are automatically skipped using email headers and Gmail labels — no data leaves the server
+- **Tier 2 (AI pre-filter):** For remaining emails, the subject line, sender name, and email snippet (2-3 lines) are sent to Google Gemini to determine if the email requires action. Emails that do not require action are discarded and not stored
+- **Tier 3 (full analysis):** For actionable emails only, the full email body text (up to 8,000 characters) and any PDF/image attachments are sent to Google Gemini for detailed analysis
+- Only emails identified as genuinely actionable (bills, appointments, legal notices, etc.) are stored in your Robin account
+- Gmail OAuth tokens (access token and refresh token) are encrypted at rest and are never logged
+- You can disconnect Gmail at any time, which immediately deletes all stored tokens
+
+**What Robin does NOT do with your Gmail:**
+- Does not store or index your full mailbox
+- Does not read emails older than 7 days
+- Does not send emails on your behalf
+- Does not modify or delete your emails
+- Does not share your email content with anyone other than Google Gemini for analysis
+- Does not log email content, subjects, or sender information to server logs
+
+### 4. Automated Decision-Making (Article 22 GDPR)
+Robin uses automated processing (AI) to:
+- **Categorize** your mail (e.g. bill, government, medical, legal)
+- **Assess urgency** (low, medium, high)
+- **Extract key details** (due dates, amounts, reference numbers)
+- **Filter Gmail** to identify actionable emails (Tier 1 + Tier 2 filtering)
+
+These are assistive suggestions only. You can edit any AI-generated analysis, recategorize items, and override any automated decision. No legally binding decisions are made solely by automated processing.
+
+### 5. Your Rights (GDPR Articles 15–22)
 You have the right to:
-- **Access** your data — export all personal data at any time
-- **Rectify** inaccurate data — edit any mail analysis via the app
+- **Access** your data — export all personal data at any time via the app
+- **Rectify** inaccurate data — edit any AI-generated analysis directly via the app
 - **Erase** your data — permanently delete your account and all associated data
-- **Restrict processing** — disconnect integrations, stop scanning
-- **Data portability** — export your data in JSON format
-- **Withdraw consent** — you may delete your account at any time
+- **Restrict processing** — disconnect Gmail, stop scanning, or delete individual items
+- **Data portability** — export your data in machine-readable JSON format
+- **Object** to processing — you may disconnect integrations or delete your account
+- **Withdraw consent** — you may delete your account at any time; this is immediate and irreversible
 
-### 5. Data Retention
-- Your data is retained as long as your account exists
-- When you delete your account, all data (mail, images, connections) is permanently and irreversibly deleted
+### 6. Data Retention
+- Your data is retained only as long as your account exists
+- When you delete your account, all data (mail items, images, Gmail tokens, sharing connections) is permanently and irreversibly deleted
 - Uploaded files are removed from disk upon mail item deletion
+- No backups of user data are retained after deletion
+- Gmail tokens are deleted immediately when you disconnect Gmail
 
-### 6. Contact
-For any data protection inquiries, contact the application administrator.
+### 7. Data Transfer
+Your data may be transferred to servers operated by Google (Gemini API) which may be located outside the European Economic Area (EEA). Google provides appropriate safeguards for international data transfers under their Data Processing Terms, including Standard Contractual Clauses (SCCs).
+
+### 8. Data Security Measures
+- AES-256-GCM encryption at rest for all sensitive fields
+- File-level encryption for uploaded documents
+- bcrypt password hashing (cost factor 12)
+- httpOnly, Secure, SameSite=Strict session cookies
+- Rate limiting on all API endpoints
+- Helmet security headers (CSP, HSTS, etc.)
+- No sensitive data in application logs
+
+### 9. Contact
+For any data protection inquiries or to exercise your GDPR rights, contact the application administrator at the email address provided during registration or on the application's homepage.
 `;
 
 export default function ConsentScreen({ onConsent }) {
@@ -114,7 +165,7 @@ export default function ConsentScreen({ onConsent }) {
             onChange={(e) => setAccepted(e.target.checked)}
           />
           <span>
-            I have read and accept the Terms of Use and Privacy Notice. I consent to my data being processed as described above, including analysis by Google Gemini AI. I understand I can withdraw consent by deleting my account.
+            I have read and accept the Terms of Use and Privacy Notice. I consent to my data being processed as described above, including the sending of my mail images, email content, and attachments to Google Gemini AI for analysis. I understand I can withdraw consent and delete all my data at any time.
           </span>
         </label>
 

@@ -115,7 +115,7 @@ router.get('/me', authenticate, async (req, res) => {
 });
 
 // Current terms version — bump this whenever terms change
-const CURRENT_TERMS_VERSION = '1.0';
+const CURRENT_TERMS_VERSION = '1.1';
 
 // POST /api/auth/consent — record GDPR consent
 router.post('/consent', authenticate, async (req, res) => {
