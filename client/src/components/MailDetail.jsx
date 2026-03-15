@@ -228,7 +228,7 @@ export default function MailDetail() {
             <span className="shared-by-badge"><Users size={14} /> Shared by {item.sharedBy?.name}</span>
           ) : (
             <>
-              {!editing && item.source !== 'gmail' && (
+              {!editing && item.source !== 'gmail' && item.source !== 'voice' && (
                 <button
                   className={`edit-btn ${rescanning ? 'spin-icon' : ''}`}
                   onClick={async () => {
