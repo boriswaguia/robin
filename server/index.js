@@ -10,7 +10,10 @@ import { mailRouter } from './routes/mail.js';
 import { uploadsRouter } from './routes/uploads.js';
 import { gmailRouter } from './routes/gmail.js';
 import { sharingRouter } from './routes/sharing.js';
+import { pushRouter } from './routes/push.js';
 import { ensureDirs } from './services/storage.js';
+import { configurePush } from './services/push.js';
+import { startScheduler } from './services/scheduler.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -20,6 +23,12 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 
 // Ensure uploads directory exists
 ensureDirs();
+
+// Configure Web Push (no-op if VAPID keys not set)
+configurePush();
+
+// Start notification scheduler (reminders + overdue alerts)
+startScheduler();
 
 // ── Security headers ────────────────────────────────────────────────────────
 app.use(helmet({
@@ -73,6 +82,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/mail', mailRouter);
 app.use('/api/gmail', gmailRouter);
 app.use('/api/sharing', sharingRouter);
+app.use('/api/push', pushRouter);
 
 // In production, serve the React build
 const clientDist = path.join(__dirname, '..', 'client', 'dist');

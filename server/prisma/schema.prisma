@@ -22,6 +22,7 @@ model User {
   mail              Mail[]
   sharingFrom       ShareConnection[] @relation("SharingFrom")
   sharingTo         ShareConnection[] @relation("SharingTo")
+  pushSubscriptions PushSubscription[]
 }
 
 model Mail {
@@ -43,8 +44,9 @@ model Mail {
   paymentDetails Json?
   actionableInfo Json?
   threadId       String?
-  reminderAt     DateTime? // When to send a reminder notification
-  reminderSent   Boolean  @default(false)
+  reminderAt          DateTime? // When to send a reminder notification
+  reminderSent        Boolean  @default(false)
+  overdueReminderSent Boolean  @default(false) // whether overdue push was sent
   status         String   @default("new")
   actionTaken    String?
   actionNote     String?
@@ -95,4 +97,28 @@ model MailShare {
   @@unique([mailId, sharedWithUserId])
   @@index([sharedWithUserId])
   @@index([sharedByUserId])
+}
+
+// ── Scheduler state (restart-safe job tracking) ──────────────────────────────
+
+// One row per named job — records the last time it ran successfully.
+// Lets the server catch up on missed jobs after a restart.
+model SchedulerState {
+  jobName   String   @id
+  lastRunAt DateTime
+}
+
+
+// One row per browser/device subscription per user
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, endpoint])
+  @@index([userId])
 }

@@ -1,9 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { Mail, RefreshCw, Unlink, CheckCircle, XCircle, Loader2, ExternalLink, Users, UserPlus, X, Tag } from 'lucide-react';
+import { Mail, RefreshCw, Unlink, CheckCircle, XCircle, Loader2, ExternalLink, Users, UserPlus, X, Tag, Bell, BellOff } from 'lucide-react';
 import {
   getSharingConnections, getPendingInvites, sendSharingInvite,
   acceptInvite, rejectInvite, removeConnection, updateSharedCategories,
 } from '../services/api';
+import {
+  subscribeToPush, unsubscribeFromPush, isThisBrowserSubscribed,
+  isPushSupported, getNotificationPermission,
+} from '../services/push';
 import { DataPrivacyCard } from './ConsentScreen';
 
 async function fetchGmailStatus() {
@@ -46,6 +50,25 @@ export default function Integrations() {
   const [inviteSuccess, setInviteSuccess] = useState(null);
   const [catUpdating, setCatUpdating]   = useState(null); // connectionId being updated
   const inviteInputRef = useRef(null);
+
+  // ── Notifications state ────────────────────────────────────────────────────
+  const [pushSupported]                 = useState(isPushSupported);
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [pushPermission, setPushPermission] = useState(getNotificationPermission());
+  const [pushLoading, setPushLoading]   = useState(false);
+  const [pushError, setPushError]       = useState(null);
+  const [serverPushEnabled, setServerPushEnabled] = useState(true);
+
+  // Check if this browser is already subscribed
+  useEffect(() => {
+    if (!pushSupported) return;
+    isThisBrowserSubscribed().then(setPushSubscribed);
+    // Also check server config
+    fetch('/api/push/vapid-public-key', { credentials: 'include' })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d) setServerPushEnabled(d.enabled); })
+      .catch(() => setServerPushEnabled(false));
+  }, [pushSupported]);
 
   // ── Load Gmail status ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -136,6 +159,32 @@ export default function Integrations() {
         : c));
     } catch (err) { setInviteError(err.message); }
     finally { setCatUpdating(null); }
+  }
+
+  // ── Notification handlers ──────────────────────────────────────────────────
+  async function handleEnableNotifications() {
+    setPushLoading(true); setPushError(null);
+    try {
+      await subscribeToPush();
+      setPushSubscribed(true);
+      setPushPermission(getNotificationPermission());
+    } catch (err) {
+      setPushError(err.message);
+    } finally {
+      setPushLoading(false);
+    }
+  }
+
+  async function handleDisableNotifications() {
+    setPushLoading(true); setPushError(null);
+    try {
+      await unsubscribeFromPush();
+      setPushSubscribed(false);
+    } catch (err) {
+      setPushError(err.message);
+    } finally {
+      setPushLoading(false);
+    }
   }
 
   return (
@@ -345,6 +394,71 @@ export default function Integrations() {
             </div>
           </>
         )}
+      </div>
+
+      {/* ── Push Notifications ───────────────────────────────────────────── */}
+      <div className="integration-card">
+        <div className="integration-header">
+          <div className={`integration-icon ${pushSubscribed ? 'notif-icon-on' : 'notif-icon-off'}`}>
+            {pushSubscribed ? <Bell size={24} /> : <BellOff size={24} />}
+          </div>
+          <div className="integration-info">
+            <h3>Push Notifications</h3>
+            <p>Get notified on this device when a reminder is due or a deadline has passed without action — even when the app is closed.</p>
+          </div>
+        </div>
+
+        {!pushSupported ? (
+          <div className="integration-note">
+            <XCircle size={15} /> Push notifications are not supported in this browser.
+          </div>
+        ) : !serverPushEnabled ? (
+          <div className="integration-note">
+            <XCircle size={15} /> Push notifications are not configured on the server. Set <code>VAPID_PUBLIC_KEY</code>, <code>VAPID_PRIVATE_KEY</code>, and <code>VAPID_EMAIL</code> in your <code>.env</code> file.
+          </div>
+        ) : pushPermission === 'denied' ? (
+          <div className="integration-note warn">
+            <XCircle size={15} /> Notification permission was denied. Please enable it in your browser settings and reload.
+          </div>
+        ) : (
+          <div className="integration-actions">
+            <div className="notif-status-row">
+              <div className={`notif-status-dot ${pushSubscribed ? 'on' : 'off'}`} />
+              <span>{pushSubscribed ? 'Notifications enabled on this device' : 'Notifications are off'}</span>
+            </div>
+
+            {pushSubscribed ? (
+              <button
+                className="btn btn-sm btn-ghost disconnect-btn"
+                onClick={handleDisableNotifications}
+                disabled={pushLoading}
+              >
+                {pushLoading ? <Loader2 size={14} className="spin" /> : <BellOff size={14} />}
+                Turn off
+              </button>
+            ) : (
+              <button
+                className="btn btn-primary"
+                onClick={handleEnableNotifications}
+                disabled={pushLoading}
+              >
+                {pushLoading ? <><Loader2 size={16} className="spin" /> Enabling…</> : <><Bell size={16} /> Enable notifications</>}
+              </button>
+            )}
+          </div>
+        )}
+
+        {pushSubscribed && (
+          <div className="notif-info-list">
+            <p className="notif-info-title">You will be notified when:</p>
+            <ul>
+              <li>⏰ A reminder you set is due</li>
+              <li>🚨 A due date has passed and you haven't acted yet</li>
+            </ul>
+          </div>
+        )}
+
+        {pushError && <div className="error-message"><XCircle size={16} /> {pushError}</div>}
       </div>
 
       {/* ── Data & Privacy ─────────────────────────────────────────────── */}

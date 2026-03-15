@@ -2429,6 +2429,85 @@ ul { list-style: none; }
   font-size: 0.82rem !important;
 }
 
+/* ── Push Notifications section in Integrations ──────────────────────────── */
+.integration-icon.notif-icon-on {
+  background: rgba(34,197,94,0.1);
+  color: #22c55e;
+}
+.integration-icon.notif-icon-off {
+  background: rgba(148,163,184,0.1);
+  color: var(--text-muted);
+}
+.notif-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+.notif-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.notif-status-dot.on  { background: #22c55e; box-shadow: 0 0 0 2px rgba(34,197,94,0.2); }
+.notif-status-dot.off { background: var(--text-muted); }
+.integration-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.integration-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  padding: 10px 14px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  line-height: 1.5;
+}
+.integration-note.warn {
+  color: var(--danger);
+  background: rgba(239,68,68,0.08);
+}
+.integration-note code {
+  font-size: 0.78rem;
+  background: var(--surface);
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+.notif-info-list {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid #22c55e;
+}
+.notif-info-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.notif-info-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.notif-info-list ul li {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
 /* ===== Consent Screen ===== */
 .consent-overlay {
   position: fixed;

@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -13,6 +14,7 @@ import ConsentScreen from './components/ConsentScreen';
 import LandingPage from './components/LandingPage';
 import CookieConsent from './components/CookieConsent';
 import PrivacyPage, { TermsPage } from './components/PrivacyPage';
+import { registerServiceWorker } from './services/push';
 
 function NotFound() {
   return (
@@ -27,6 +29,28 @@ function NotFound() {
 function AppRoutes() {
   const { isAuthenticated, hasConsented, updateUser, loading } = useAuth();
   const { pathname } = useLocation();
+
+  // Register service worker on mount so it's ready for push, even before the
+  // user explicitly enables notifications from the Integrations page.
+  // Also re-syncs an existing browser subscription with the server after login.
+  useEffect(() => {
+    registerServiceWorker().then(async (reg) => {
+      if (!reg || !isAuthenticated) return;
+      // If this browser already has a push subscription, re-send it to the
+      // server (protects against subscriptions lost after server redeploy).
+      try {
+        const existing = await reg.pushManager.getSubscription();
+        if (existing) {
+          await fetch('/api/push/subscribe', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(existing.toJSON()),
+          });
+        }
+      } catch { /* non-critical — user can re-subscribe from Integrations */ }
+    });
+  }, [isAuthenticated]);
 
   // Public routes — always accessible regardless of auth state
   const publicRoutes = ['/privacy', '/terms'];
