@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -10,6 +10,9 @@ import ContactDetail from './components/ContactDetail';
 import AuthPage from './components/AuthPage';
 import Integrations from './components/Integrations';
 import ConsentScreen from './components/ConsentScreen';
+import LandingPage from './components/LandingPage';
+import CookieConsent from './components/CookieConsent';
+import PrivacyPage, { TermsPage } from './components/PrivacyPage';
 
 function NotFound() {
   return (
@@ -23,13 +26,29 @@ function NotFound() {
 
 function AppRoutes() {
   const { isAuthenticated, hasConsented, updateUser, loading } = useAuth();
+  const { pathname } = useLocation();
+
+  // Public routes — always accessible regardless of auth state
+  const publicRoutes = ['/privacy', '/terms'];
+  if (publicRoutes.includes(pathname)) {
+    return (
+      <Routes>
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+      </Routes>
+    );
+  }
 
   if (loading) {
     return <div className="loading">Loading…</div>;
   }
 
   if (!isAuthenticated) {
-    return <AuthPage />;
+    // Show landing page on root, AuthPage on /login
+    if (pathname === '/login' || pathname === '/register') {
+      return <AuthPage />;
+    }
+    return <LandingPage />;
   }
 
   if (!hasConsented) {
@@ -56,6 +75,7 @@ export default function App() {
   return (
     <AuthProvider>
       <AppRoutes />
+      <CookieConsent />
     </AuthProvider>
   );
 }
