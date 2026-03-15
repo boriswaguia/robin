@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardList, AlertTriangle, Clock, CalendarDays, ChevronRight, Inbox, CheckCircle2, Circle } from 'lucide-react';
-import { getAgenda, performAction } from '../services/api';
+import { ClipboardList, AlertTriangle, Clock, CalendarDays, ChevronRight, Inbox, CheckCircle2, Circle, Undo2 } from 'lucide-react';
+import { getAgenda, performAction, reopenMail } from '../services/api';
 import { getCategoryColor, getCategoryIcon } from '../utils';
 
 function formatDueDate(iso) {
@@ -32,8 +32,8 @@ function AgendaItem({ item, onDone }) {
     try {
       await performAction(item.id, 'archive', 'Marked done from Agenda');
       setDone(true);
-      // Let the fade-out animation play, then remove from list
-      setTimeout(() => onDone(item.id), 350);
+      // Let the fade-out animation play, then notify parent (which shows undo toast)
+      setTimeout(() => onDone(item), 350);
     } catch {
       setMarking(false);
     }
@@ -90,6 +90,8 @@ function AgendaSection({ title, icon: Icon, items, variant, onDone }) {
 export default function Agenda() {
   const [agenda, setAgenda] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [undoItem, setUndoItem] = useState(null);   // item that was just marked done
+  const [undoTimer, setUndoTimer] = useState(null);
 
   useEffect(() => {
     getAgenda()
@@ -98,13 +100,33 @@ export default function Agenda() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Optimistically remove a completed item from all sections
-  function handleDone(itemId) {
+  // Optimistically remove a completed item and show undo toast
+  function handleDone(item) {
+    // Clear any existing undo timer
+    if (undoTimer) clearTimeout(undoTimer);
+
     setAgenda((prev) => ({
-      overdue: prev.overdue.filter((i) => i.id !== itemId),
-      thisWeek: prev.thisWeek.filter((i) => i.id !== itemId),
-      upcoming: prev.upcoming.filter((i) => i.id !== itemId),
+      overdue: prev.overdue.filter((i) => i.id !== item.id),
+      thisWeek: prev.thisWeek.filter((i) => i.id !== item.id),
+      upcoming: prev.upcoming.filter((i) => i.id !== item.id),
     }));
+
+    setUndoItem(item);
+    const timer = setTimeout(() => setUndoItem(null), 5000);
+    setUndoTimer(timer);
+  }
+
+  async function handleUndo() {
+    if (!undoItem) return;
+    if (undoTimer) clearTimeout(undoTimer);
+    try {
+      await reopenMail(undoItem.id);
+      // Re-fetch the agenda to restore the item in the correct section
+      const fresh = await getAgenda();
+      setAgenda(fresh);
+    } catch { /* ignore */ }
+    setUndoItem(null);
+    setUndoTimer(null);
   }
 
   if (loading) {
@@ -159,6 +181,16 @@ export default function Agenda() {
         variant="upcoming"
         onDone={handleDone}
       />
+
+      {undoItem && (
+        <div className="undo-toast">
+          <CheckCircle2 size={16} />
+          <span>Marked done: <strong>{undoItem.sender || 'Mail'}</strong></span>
+          <button className="undo-btn" onClick={handleUndo}>
+            <Undo2 size={14} /> Undo
+          </button>
+        </div>
+      )}
     </div>
   );
 }

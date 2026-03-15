@@ -99,14 +99,6 @@ export async function rescanMail(id) {
   return res.json();
 }
 
-export async function searchMail(params = {}) {
-  const qs = new URLSearchParams();
-  Object.entries(params).forEach(([k, v]) => { if (v) qs.set(k, v); });
-  const res = await fetch(`${API_BASE}/search?${qs}`, OPTS);
-  if (!res.ok) throw new Error('Search failed');
-  return res.json();
-}
-
 export async function getContacts() {
   const res = await fetch(`${API_BASE}/contacts`, OPTS);
   if (!res.ok) throw new Error('Failed to fetch contacts');

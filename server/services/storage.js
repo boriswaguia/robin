@@ -18,36 +18,6 @@ export async function getAllMail(userId) {
   });
 }
 
-/** Search mail with filters */
-export async function searchMail(userId, { q, sender, receiver, category, status, dateFrom, dateTo }) {
-  const where = { userId };
-
-  if (q) {
-    where.OR = [
-      { sender: { contains: q, mode: 'insensitive' } },
-      { receiver: { contains: q, mode: 'insensitive' } },
-      { summary: { contains: q, mode: 'insensitive' } },
-      { extractedText: { contains: q, mode: 'insensitive' } },
-    ];
-  }
-  if (sender) where.sender = { contains: sender, mode: 'insensitive' };
-  if (receiver) where.receiver = { contains: receiver, mode: 'insensitive' };
-  if (category) where.category = category;
-  if (status === 'action_needed') where.status = 'new';
-  else if (status === 'done') where.status = 'action_taken';
-  else if (status) where.status = status;
-  if (dateFrom || dateTo) {
-    where.createdAt = {};
-    if (dateFrom) where.createdAt.gte = new Date(dateFrom);
-    if (dateTo) where.createdAt.lte = new Date(dateTo + 'T23:59:59.999Z');
-  }
-
-  return prisma.mail.findMany({
-    where,
-    orderBy: { createdAt: 'desc' },
-  });
-}
-
 /** Get distinct contacts (senders + receivers) with mail counts */
 export async function getContacts(userId) {
   const mail = await prisma.mail.findMany({

@@ -1,16 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Inbox, ScanLine, ChevronRight, AlertTriangle, Search, X, Bell, Users, ChevronDown, ChevronUp } from 'lucide-react';
-import { getAllMail, searchMail, getDueReminders, getSharedWithMe } from '../services/api';
+import { getAllMail, getDueReminders, getSharedWithMe } from '../services/api';
 import MailCard from './MailCard';
 
 export default function Dashboard() {
-  const [mail, setMail] = useState([]);
+  const [mail, setMail] = useState([]);          // all mail (source of truth)
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [showSearch, setShowSearch] = useState(false);
   const [searchParams, setSearchParams] = useState({ q: '', sender: '', receiver: '', dateFrom: '', dateTo: '' });
-  const [isSearching, setIsSearching] = useState(false);
   const [reminders, setReminders] = useState([]);
   const [dismissedReminders, setDismissedReminders] = useState(new Set());
   const [sharedMail, setSharedMail] = useState([]);
@@ -61,19 +60,31 @@ export default function Dashboard() {
 
   async function handleSearch(e) {
     e.preventDefault();
-    setIsSearching(true);
-    try {
-      const results = await searchMail(searchParams);
-      setMail(results);
-    } catch { /* ignore */ }
-    setIsSearching(false);
+    // No-op — filtering is now live via searchParams
   }
 
   function clearSearch() {
     setSearchParams({ q: '', sender: '', receiver: '', dateFrom: '', dateTo: '' });
     setShowSearch(false);
-    setLoading(true);
-    fetchMail().finally(() => setLoading(false));
+  }
+
+  // Client-side search filtering (fields are already decrypted in memory)
+  const isSearchActive = Object.values(searchParams).some((v) => v);
+
+  function matchesSearch(m) {
+    const { q, sender, receiver, dateFrom, dateTo } = searchParams;
+    if (q) {
+      const lower = q.toLowerCase();
+      const match = (m.sender && m.sender.toLowerCase().includes(lower)) ||
+                    (m.receiver && m.receiver.toLowerCase().includes(lower)) ||
+                    (m.summary && m.summary.toLowerCase().includes(lower));
+      if (!match) return false;
+    }
+    if (sender && !(m.sender && m.sender.toLowerCase().includes(sender.toLowerCase()))) return false;
+    if (receiver && !(m.receiver && m.receiver.toLowerCase().includes(receiver.toLowerCase()))) return false;
+    if (dateFrom && m.createdAt < dateFrom) return false;
+    if (dateTo && m.createdAt > dateTo + 'T23:59:59.999Z') return false;
+    return true;
   }
 
   // Items that genuinely need user attention (new + has suggested actions, excluding errors)
@@ -103,7 +114,8 @@ export default function Dashboard() {
   const filtered = (filter === 'all'
     ? mail
     : mail.filter((m) => m.category === filter)
-  ).slice().sort(prioritySort);
+  ).filter((m) => !isSearchActive || matchesSearch(m))
+   .slice().sort(prioritySort);
 
   if (loading) {
     return <div className="loading">Loading your mail…</div>;
@@ -155,7 +167,7 @@ export default function Dashboard() {
       )}
 
       {showSearch && (
-        <form className="search-bar" onSubmit={handleSearch}>
+        <div className="search-bar">
           <div className="search-row">
             <Search size={16} />
             <input
@@ -163,6 +175,7 @@ export default function Dashboard() {
               placeholder="Search all mail…"
               value={searchParams.q}
               onChange={(e) => setSearchParams({ ...searchParams, q: e.target.value })}
+              autoFocus
             />
             <button type="button" className="search-clear" onClick={clearSearch} title="Clear search">
               <X size={16} />
@@ -194,10 +207,7 @@ export default function Dashboard() {
               title="To date"
             />
           </div>
-          <button type="submit" className="btn btn-primary search-submit" disabled={isSearching}>
-            {isSearching ? 'Searching…' : 'Search'}
-          </button>
-        </form>
+        </div>
       )}
 
       {mail.length > 0 && (

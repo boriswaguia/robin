@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import { v4 as uuid } from 'uuid';
 import prisma from '../services/db.js';
 import { analyzeMail, findRelatedMail, analyzeVoice } from '../services/ai.js';
-import { getAllMail, getMailById, saveMail, updateMail, deleteMail, getRelatedMail, searchMail, getContacts, getMailByContact, getDueReminders, getAgendaItems } from '../services/storage.js';
+import { getAllMail, getMailById, saveMail, updateMail, deleteMail, getRelatedMail, getContacts, getMailByContact, getDueReminders, getAgendaItems } from '../services/storage.js';
 import { authenticate } from '../middleware/auth.js';
 import { encryptBuffer, isEncryptionEnabled } from '../services/crypto.js';
 
@@ -210,13 +210,6 @@ async function processMailAsync(mailId, userId, imagePaths) {
 // GET /api/mail — list all scanned mail
 router.get('/', async (req, res) => {
   const items = await getAllMail(req.user.id);
-  res.json(items);
-});
-
-// GET /api/mail/search — search and filter mail
-router.get('/search', async (req, res) => {
-  const { q, sender, receiver, category, status, dateFrom, dateTo } = req.query;
-  const items = await searchMail(req.user.id, { q, sender, receiver, category, status, dateFrom, dateTo });
   res.json(items);
 });
 
