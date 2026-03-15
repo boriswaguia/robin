@@ -72,7 +72,6 @@ router.get('/users', async (req, res) => {
           createdAt: true,
           _count: {
             select: {
-              mail: true,
               pushSubscriptions: true,
               sharingFrom: true,
               sharingTo: true,
@@ -115,7 +114,6 @@ router.get('/users/:id', async (req, res) => {
         updatedAt: true,
         _count: {
           select: {
-            mail: true,
             pushSubscriptions: true,
             sharingFrom: true,
             sharingTo: true,

@@ -209,7 +209,6 @@ function UsersTab() {
               <div className="admin-detail-item"><span>Joined</span><strong>{new Date(u.createdAt).toLocaleDateString()}</strong></div>
               <div className="admin-detail-item"><span>Gmail</span><strong>{u.gmailEmail || 'Not connected'}</strong></div>
               <div className="admin-detail-item"><span>Consent</span><strong>{u.consentedAt ? `v${u.consentVersion}` : 'None'}</strong></div>
-              <div className="admin-detail-item"><span>Mail Items</span><strong>{u._count.mail}</strong></div>
               <div className="admin-detail-item"><span>Sharing</span><strong>{u._count.sharingFrom + u._count.sharingTo} connections</strong></div>
               <div className="admin-detail-item"><span>Push Devices</span><strong>{u._count.pushSubscriptions}</strong></div>
               <div className="admin-detail-item"><span>Gmail Syncs</span><strong>{u._count.gmailSyncs}</strong></div>
