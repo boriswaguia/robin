@@ -136,21 +136,7 @@ router.get('/users/:id', async (req, res) => {
       select: { id: true, action: true, count: true, metadata: true, createdAt: true },
     });
 
-    // Get item breakdown by category
-    const mailByCategory = await prisma.mail.groupBy({
-      by: ['category'],
-      where: { userId: req.params.id },
-      _count: true,
-    });
-
-    // Get item breakdown by status
-    const mailByStatus = await prisma.mail.groupBy({
-      by: ['status'],
-      where: { userId: req.params.id },
-      _count: true,
-    });
-
-    res.json({ user, recentActivity, mailByCategory, mailByStatus });
+    res.json({ user, recentActivity });
   } catch (err) {
     console.error('Admin get user error:', err.message);
     res.status(500).json({ error: 'Failed to get user details' });

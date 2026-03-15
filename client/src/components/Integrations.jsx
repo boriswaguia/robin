@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Mail, RefreshCw, Unlink, CheckCircle, XCircle, Loader2, ExternalLink, Users, UserPlus, X, Tag, Bell, BellOff } from 'lucide-react';
+import { Mail, RefreshCw, Unlink, CheckCircle, XCircle, Loader2, ExternalLink, Users, UserPlus, X, Tag, Bell, BellOff, User, Copy, Check } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import {
   getSharingConnections, getPendingInvites, sendSharingInvite,
   acceptInvite, rejectInvite, removeConnection, updateSharedCategories,
@@ -36,6 +37,56 @@ async function disconnectGmail() {
 }
 
 const SHARE_CATEGORIES = ['bill', 'government', 'legal', 'medical', 'insurance', 'financial', 'tax', 'personal', 'subscription', 'other'];
+
+function ProfileCard() {
+  const { user } = useAuth();
+  const [copied, setCopied] = useState(false);
+
+  function handleCopyEmail() {
+    navigator.clipboard.writeText(user?.email || '').then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  const joined = user?.createdAt
+    ? new Date(user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+    : null;
+
+  return (
+    <div className="integration-card">
+      <div className="integration-header">
+        <div className="integration-icon profile-icon"><User size={24} /></div>
+        <div className="integration-info">
+          <h3>Your Account</h3>
+          <p>Signed in as <strong>{user?.name}</strong></p>
+        </div>
+      </div>
+
+      <div className="profile-detail-grid">
+        <div className="profile-row">
+          <span className="profile-label">Email</span>
+          <span className="profile-value">
+            {user?.email}
+            <button className="btn-icon-sm" onClick={handleCopyEmail} title="Copy email">
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+            </button>
+          </span>
+        </div>
+        <div className="profile-row">
+          <span className="profile-label">Name</span>
+          <span className="profile-value">{user?.name}</span>
+        </div>
+        {joined && (
+          <div className="profile-row">
+            <span className="profile-label">Member since</span>
+            <span className="profile-value">{joined}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function Integrations() {
   // ── Gmail state ────────────────────────────────────────────────────────────
@@ -231,7 +282,10 @@ export default function Integrations() {
 
   return (
     <div className="integrations-page">
-      <h2 className="integrations-title">Integrations & Sharing</h2>
+      <h2 className="integrations-title">Settings</h2>
+
+      {/* ── Profile ───────────────────────────────────────────────────────── */}
+      <ProfileCard />
 
       {/* ── Gmail ─────────────────────────────────────────────────────────── */}
       <div className="integration-card">

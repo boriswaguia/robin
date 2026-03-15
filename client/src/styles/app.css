@@ -148,6 +148,37 @@ ul { list-style: none; }
   background: #fce8e6;
   color: #c5221f;
 }
+.integration-icon.profile-icon {
+  background: rgba(var(--primary-rgb, 99,102,241), .15);
+  color: var(--primary);
+}
+
+/* ── Profile card ───────────────────────────────────── */
+.profile-detail-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.profile-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  font-size: .9rem;
+}
+.profile-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.profile-value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  word-break: break-all;
+}
 .integration-info h3 {
   font-size: 1rem;
   font-weight: 600;

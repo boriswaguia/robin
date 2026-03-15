@@ -216,28 +216,6 @@ function UsersTab() {
               <div className="admin-detail-item"><span>Activity Logs</span><strong>{u._count.activityLogs}</strong></div>
             </div>
 
-            {userDetail.mailByCategory?.length > 0 && (
-              <div className="admin-breakdown">
-                <h4>Mail by Category</h4>
-                <div className="admin-breakdown-list">
-                  {userDetail.mailByCategory.map((c) => (
-                    <span key={c.category} className="admin-breakdown-chip">{c.category || 'uncategorized'}: {c._count}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {userDetail.mailByStatus?.length > 0 && (
-              <div className="admin-breakdown">
-                <h4>Mail by Status</h4>
-                <div className="admin-breakdown-list">
-                  {userDetail.mailByStatus.map((s) => (
-                    <span key={s.status} className="admin-breakdown-chip">{s.status}: {s._count}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {userDetail.recentActivity?.length > 0 && (
               <div className="admin-breakdown">
                 <h4>Recent Activity</h4>
