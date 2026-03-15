@@ -437,7 +437,7 @@ router.post('/voice', audioUpload.single('audio'), async (req, res) => {
       userId: req.user.id,
       imageUrl: null,
       imageUrls: [],
-      status: 'done',
+      status: 'new',
       extractedText: analysis.transcription || '',
       summary: analysis.summary || 'Voice reminder',
       sender: 'Voice Memo',

@@ -335,7 +335,7 @@ export default function MailDetail() {
           const primaryAction = suggested[0];
           const primaryConfig = primaryAction ? ACTION_CONFIG[primaryAction] : null;
           const dueInfo = getDueDaysText(item.dueDate);
-          const isCompleted = item.status === 'action_taken' || item.status === 'discarded';
+          const isCompleted = item.status === 'action_taken' || item.status === 'discarded' || item.status === 'done';
           const hasLabel = item.actionTaken && CATEGORIZE_ACTIONS[item.actionTaken];
           const needsAction = suggested.length > 0 && !isCompleted;
           const PrimaryIcon = primaryConfig?.icon;
