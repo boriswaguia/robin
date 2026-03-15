@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Cookie, X, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const COOKIE_CONSENT_KEY = 'robin_cookie_consent';
 
@@ -10,14 +11,13 @@ const COOKIE_CONSENT_KEY = 'robin_cookie_consent';
  * Shows on every public/authenticated page until accepted.
  */
 export default function CookieConsent() {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const [animating, setAnimating] = useState(false);
 
   useEffect(() => {
-    // Don't show if already consented
     const consent = localStorage.getItem(COOKIE_CONSENT_KEY);
     if (!consent) {
-      // Small delay so it slides in smoothly after page load
       const timer = setTimeout(() => setVisible(true), 800);
       return () => clearTimeout(timer);
     }
@@ -47,19 +47,17 @@ export default function CookieConsent() {
         </div>
         <div className="cookie-banner-text">
           <p>
-            <strong>We use essential cookies only</strong> — a single httpOnly session cookie to keep you signed in. No tracking, no analytics, no third-party cookies.
+            <strong>{t('cookie.essentialOnly')}</strong> {t('cookie.description')}
           </p>
           <p className="cookie-banner-detail">
-            By continuing to use Robin you agree to our{' '}
-            <Link to="/privacy">Privacy Policy</Link>.
-            You can delete your data or account at any time.
+            {t('cookie.detail')}
           </p>
         </div>
         <div className="cookie-banner-actions">
           <button className="btn btn-primary btn-sm cookie-accept-btn" onClick={accept}>
-            Got it
+            {t('cookie.gotIt')}
           </button>
-          <button className="cookie-close-btn" onClick={accept} title="Dismiss">
+          <button className="cookie-close-btn" onClick={accept} title={t('cookie.dismiss')}>
             <X size={16} />
           </button>
         </div>

@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Camera, Upload, Loader2, X, ImagePlus, FileText, Clipboard, Plus, Mic } from 'lucide-react';
 import { scanMail } from '../services/api';
 import VoiceRecorder from './VoiceRecorder';
+import { useTranslation } from 'react-i18next';
 
 export default function Scanner() {
+  const { t } = useTranslation();
   const [mode, setMode] = useState('scan'); // 'scan' | 'voice'
   const [pages, setPages] = useState([]); // Array of { file, preview }
   const [loading, setLoading] = useState(false);
@@ -86,7 +88,7 @@ export default function Scanner() {
 
   return (
     <div className="scanner">
-      <h2>Scan Your Mail</h2>
+      <h2>{t('scanner.title')}</h2>
 
       {/* Mode toggle */}
       <div className="scanner-mode-tabs">
@@ -94,13 +96,13 @@ export default function Scanner() {
           className={`scanner-mode-tab ${mode === 'scan' ? 'active' : ''}`}
           onClick={() => setMode('scan')}
         >
-          <ImagePlus size={16} /> Document Scan
+          <ImagePlus size={16} /> {t('scanner.documentScan')}
         </button>
         <button
           className={`scanner-mode-tab ${mode === 'voice' ? 'active' : ''}`}
           onClick={() => setMode('voice')}
         >
-          <Mic size={16} /> Voice Reminder
+          <Mic size={16} /> {t('scanner.voiceReminder')}
         </button>
       </div>
 
@@ -110,8 +112,8 @@ export default function Scanner() {
         <>
       <p className="subtitle">
         {hasPages
-          ? `${pages.length} page${pages.length > 1 ? 's' : ''} added — add more or scan now`
-          : 'Take a photo or upload images of your mail'}
+          ? t('scanner.pagesAdded', { count: pages.length })
+          : t('scanner.subtitle')}
       </p>
 
       {!hasPages ? (
@@ -123,9 +125,9 @@ export default function Scanner() {
           onClick={() => fileInputRef.current?.click()}
         >
           <ImagePlus size={48} strokeWidth={1.5} />
-          <p>Drop images or PDF here, or tap to browse</p>
-          <p className="paste-hint"><Clipboard size={14} /> or press <kbd>Ctrl+V</kbd> to paste a screenshot</p>
-          <p className="paste-hint">Multi-page documents: select multiple files at once</p>
+          <p>{t('scanner.dropZone')}</p>
+          <p className="paste-hint"><Clipboard size={14} /> {t('scanner.pasteHint')}</p>
+          <p className="paste-hint">{t('scanner.multiPageHint')}</p>
           <input
             ref={fileInputRef}
             type="file"
@@ -143,7 +145,7 @@ export default function Scanner() {
               return (
                 <div className="page-thumb" key={i}>
                   <span className="page-number">{i + 1}</span>
-                  <button className="page-remove" onClick={() => removePage(i)} title="Remove page">
+                  <button className="page-remove" onClick={() => removePage(i)} title={t('scanner.removePage')}>
                     <X size={14} />
                   </button>
                   {isPdf ? (
@@ -162,10 +164,10 @@ export default function Scanner() {
               <button
                 className="page-thumb add-page"
                 onClick={() => addPageInputRef.current?.click()}
-                title="Add another page"
+                title={t('scanner.addPage')}
               >
                 <Plus size={28} strokeWidth={1.5} />
-                <span>Add Page</span>
+                <span>{t('scanner.addPage')}</span>
               </button>
             )}
           </div>
@@ -177,7 +179,7 @@ export default function Scanner() {
             hidden
             onChange={(e) => addMultipleFiles(e.target.files)}
           />
-          <button className="btn-link clear-all" onClick={clearAll}>Clear all pages</button>
+          <button className="btn-link clear-all" onClick={clearAll}>{t('scanner.clearAll')}</button>
         </div>
       )}
 
@@ -188,7 +190,7 @@ export default function Scanner() {
           disabled={loading}
         >
           <Camera size={20} />
-          <span>Camera</span>
+          <span>{t('scanner.camera')}</span>
         </button>
         <input
           ref={cameraInputRef}
@@ -207,12 +209,12 @@ export default function Scanner() {
           {loading ? (
             <>
               <Loader2 size={20} className="spin" />
-              <span>Uploading…</span>
+              <span>{t('scanner.uploading')}</span>
             </>
           ) : (
             <>
               <Upload size={20} />
-              <span>Scan {pages.length > 1 ? `${pages.length} Pages` : '& Analyze'}</span>
+              <span>{pages.length > 1 ? t('scanner.scanPages', { count: pages.length }) : t('scanner.scanAnalyze')}</span>
             </>
           )}
         </button>

@@ -4,6 +4,7 @@ import {
   Shield, ShieldOff, Mail, XCircle, Loader2,
   BarChart3, UserPlus, ArrowUpDown,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const API = '/api/admin';
 const OPTS = { credentials: 'include' };
@@ -31,47 +32,49 @@ async function apiPatch(url, body) {
   return res.json();
 }
 
-// ── Action labels for activity display ───────────────────────────────────────
-const ACTION_LABELS = {
-  'auth.register': 'Registered',
-  'auth.login': 'Logged in',
-  'auth.logout': 'Logged out',
-  'mail.scan': 'Scanned mail',
-  'mail.voice': 'Voice memo',
-  'mail.action': 'Took action',
-  'mail.delete': 'Deleted mail',
-  'gmail.sync': 'Gmail sync',
+// ── Action keys for activity display ────────────────────────────────────────
+const ACTION_KEYS = {
+  'auth.register': 'admin.actionRegistered',
+  'auth.login': 'admin.actionLoggedIn',
+  'auth.logout': 'admin.actionLoggedOut',
+  'mail.scan': 'admin.actionScanned',
+  'mail.voice': 'admin.actionVoice',
+  'mail.action': 'admin.actionTookAction',
+  'mail.delete': 'admin.actionDeleted',
+  'gmail.sync': 'admin.actionGmailSync',
 };
 
-function actionLabel(action) {
-  return ACTION_LABELS[action] || action;
+function actionLabel(action, t) {
+  const key = ACTION_KEYS[action];
+  return key ? t(key) : action;
 }
 
-function timeAgo(date) {
+function timeAgo(date, t) {
   const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
-  if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  if (s < 604800) return `${Math.floor(s / 86400)}d ago`;
+  if (s < 60) return t('admin.justNow');
+  if (s < 3600) return t('admin.minutesAgo', { count: Math.floor(s / 60) });
+  if (s < 86400) return t('admin.hoursAgo', { count: Math.floor(s / 3600) });
+  if (s < 604800) return t('admin.daysAgo', { count: Math.floor(s / 86400) });
   return new Date(date).toLocaleDateString();
 }
 
 // ── Stats Overview ───────────────────────────────────────────────────────────
 function StatsCards({ stats }) {
+  const { t } = useTranslation();
   if (!stats) return null;
   const cards = [
-    { label: 'Total Users', value: stats.totalUsers, icon: Users },
-    { label: 'Gmail Connected', value: stats.gmailUsers, icon: Mail },
-    { label: 'Total Mail Items', value: stats.totalMail, icon: BarChart3 },
-    { label: 'New This Week', value: stats.recentSignups, icon: UserPlus },
+    { labelKey: 'admin.totalUsers', value: stats.totalUsers, icon: Users },
+    { labelKey: 'admin.gmailConnected', value: stats.gmailUsers, icon: Mail },
+    { labelKey: 'admin.totalMail', value: stats.totalMail, icon: BarChart3 },
+    { labelKey: 'admin.newThisWeek', value: stats.recentSignups, icon: UserPlus },
   ];
   return (
     <div className="admin-stats">
       {cards.map((c) => (
-        <div key={c.label} className="admin-stat-card">
+        <div key={c.labelKey} className="admin-stat-card">
           <c.icon size={20} className="admin-stat-icon" />
           <div className="admin-stat-value">{c.value}</div>
-          <div className="admin-stat-label">{c.label}</div>
+          <div className="admin-stat-label">{t(c.labelKey)}</div>
         </div>
       ))}
     </div>
@@ -80,6 +83,7 @@ function StatsCards({ stats }) {
 
 // ── Pagination ──────────────────────────────────────────────────────────────
 function Pagination({ pagination, onPageChange }) {
+  const { t } = useTranslation();
   if (!pagination || pagination.pages <= 1) return null;
   return (
     <div className="admin-pagination">
@@ -91,7 +95,7 @@ function Pagination({ pagination, onPageChange }) {
         <ChevronLeft size={16} />
       </button>
       <span className="admin-pagination-info">
-        Page {pagination.page} of {pagination.pages} ({pagination.total} total)
+        {t('admin.pageOf', { page: pagination.page, pages: pagination.pages, total: pagination.total })}
       </span>
       <button
         className="btn btn-ghost btn-sm"
@@ -106,6 +110,7 @@ function Pagination({ pagination, onPageChange }) {
 
 // ── Users Tab ────────────────────────────────────────────────────────────────
 function UsersTab() {
+  const { t } = useTranslation();
   const [users, setUsers] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -191,10 +196,10 @@ function UsersTab() {
     return (
       <div className="admin-detail-view">
         <button className="btn btn-ghost btn-sm" onClick={() => { setSelectedUser(null); setUserDetail(null); }}>
-          <ChevronLeft size={16} /> Back to users
+          <ChevronLeft size={16} /> {t('admin.backToUsers')}
         </button>
         {detailLoading ? (
-          <div className="admin-loading"><Loader2 size={18} className="spin" /> Loading…</div>
+          <div className="admin-loading"><Loader2 size={18} className="spin" /> {t('common.loading')}</div>
         ) : (
           <>
             <div className="admin-user-header">
@@ -206,24 +211,24 @@ function UsersTab() {
             </div>
 
             <div className="admin-detail-grid">
-              <div className="admin-detail-item"><span>Joined</span><strong>{new Date(u.createdAt).toLocaleDateString()}</strong></div>
-              <div className="admin-detail-item"><span>Gmail</span><strong>{u.gmailEmail || 'Not connected'}</strong></div>
-              <div className="admin-detail-item"><span>Consent</span><strong>{u.consentedAt ? `v${u.consentVersion}` : 'None'}</strong></div>
-              <div className="admin-detail-item"><span>Sharing</span><strong>{u._count.sharingFrom + u._count.sharingTo} connections</strong></div>
-              <div className="admin-detail-item"><span>Push Devices</span><strong>{u._count.pushSubscriptions}</strong></div>
-              <div className="admin-detail-item"><span>Gmail Syncs</span><strong>{u._count.gmailSyncs}</strong></div>
-              <div className="admin-detail-item"><span>Activity Logs</span><strong>{u._count.activityLogs}</strong></div>
+              <div className="admin-detail-item"><span>{t('admin.joined')}</span><strong>{new Date(u.createdAt).toLocaleDateString()}</strong></div>
+              <div className="admin-detail-item"><span>{t('admin.gmail')}</span><strong>{u.gmailEmail || t('integrations.gmail.disconnected')}</strong></div>
+              <div className="admin-detail-item"><span>{t('admin.consent')}</span><strong>{u.consentedAt ? `v${u.consentVersion}` : 'None'}</strong></div>
+              <div className="admin-detail-item"><span>{t('admin.sharing')}</span><strong>{u._count.sharingFrom + u._count.sharingTo} {t('admin.connections')}</strong></div>
+              <div className="admin-detail-item"><span>{t('admin.pushDevices')}</span><strong>{u._count.pushSubscriptions}</strong></div>
+              <div className="admin-detail-item"><span>{t('admin.gmailSyncs')}</span><strong>{u._count.gmailSyncs}</strong></div>
+              <div className="admin-detail-item"><span>{t('admin.activityLogs')}</span><strong>{u._count.activityLogs}</strong></div>
             </div>
 
             {userDetail.recentActivity?.length > 0 && (
               <div className="admin-breakdown">
-                <h4>Recent Activity</h4>
+                <h4>{t('admin.recentActivity')}</h4>
                 <div className="admin-mini-activity">
                   {userDetail.recentActivity.map((a) => (
                     <div key={a.id} className="admin-mini-activity-row">
-                      <span className="admin-action-tag">{actionLabel(a.action)}</span>
+                      <span className="admin-action-tag">{actionLabel(a.action, t)}</span>
                       {a.count != null && <span className="text-muted">×{a.count}</span>}
-                      <span className="text-muted admin-time">{timeAgo(a.createdAt)}</span>
+                      <span className="text-muted admin-time">{timeAgo(a.createdAt, t)}</span>
                     </div>
                   ))}
                 </div>
@@ -243,43 +248,43 @@ function UsersTab() {
           <Search size={16} />
           <input
             type="text"
-            placeholder="Search by name or email…"
+            placeholder={t('admin.searchPlaceholder')}
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="admin-search-input"
           />
         </div>
         <select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }} className="admin-filter-select">
-          <option value="">All Roles</option>
-          <option value="admin">Admin</option>
-          <option value="user">User</option>
+          <option value="">{t('admin.allRoles')}</option>
+          <option value="admin">{t('admin.adminRole')}</option>
+          <option value="user">{t('admin.userRole')}</option>
         </select>
         <select value={gmailFilter} onChange={(e) => { setGmailFilter(e.target.value); setPage(1); }} className="admin-filter-select">
-          <option value="">Gmail: All</option>
-          <option value="true">Connected</option>
-          <option value="false">Not Connected</option>
+          <option value="">{t('admin.gmailAll')}</option>
+          <option value="true">{t('admin.gmailConnectedFilter')}</option>
+          <option value="false">{t('admin.gmailNotConnected')}</option>
         </select>
       </div>
 
       {error && <div className="error-message"><XCircle size={16} /> {error}</div>}
 
       {loading ? (
-        <div className="admin-loading"><Loader2 size={18} className="spin" /> Loading users…</div>
+        <div className="admin-loading"><Loader2 size={18} className="spin" /> {t('admin.loadingUsers')}</div>
       ) : users.length === 0 ? (
-        <div className="admin-empty">No users found matching your filters.</div>
+        <div className="admin-empty">{t('admin.noUsersFound')}</div>
       ) : (
         <>
           <div className="admin-table-wrap">
             <table className="admin-table">
               <thead>
                 <tr>
-                  <SortHeader col="name">Name</SortHeader>
-                  <SortHeader col="email">Email</SortHeader>
-                  <SortHeader col="role">Role</SortHeader>
+                  <SortHeader col="name">{t('admin.colName')}</SortHeader>
+                  <SortHeader col="email">{t('admin.colEmail')}</SortHeader>
+                  <SortHeader col="role">{t('admin.colRole')}</SortHeader>
                   <th>Items</th>
-                  <th>Gmail</th>
-                  <SortHeader col="createdAt">Joined</SortHeader>
-                  <th>Actions</th>
+                  <th>{t('admin.colGmail')}</th>
+                  <SortHeader col="createdAt">{t('admin.joined')}</SortHeader>
+                  <th>{t('admin.colActions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -294,7 +299,7 @@ function UsersTab() {
                     <td onClick={(e) => e.stopPropagation()}>
                       <button
                         className="btn btn-ghost btn-sm"
-                        title={u.role === 'admin' ? 'Remove admin' : 'Make admin'}
+                        title={u.role === 'admin' ? t('admin.removeAdmin') : t('admin.makeAdmin')}
                         onClick={() => toggleRole(u.id, u.role)}
                       >
                         {u.role === 'admin' ? <ShieldOff size={16} /> : <Shield size={16} />}
@@ -314,6 +319,7 @@ function UsersTab() {
 
 // ── Activity Tab ─────────────────────────────────────────────────────────────
 function ActivityTab() {
+  const { t } = useTranslation();
   const [logs, setLogs] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -371,7 +377,7 @@ function ActivityTab() {
           onChange={(e) => { setSelectedUserId(e.target.value); setPage(1); }}
           className="admin-filter-select"
         >
-          <option value="">All Users</option>
+          <option value="">{t('admin.allUsers')}</option>
           {filteredUsers.map((u) => (
             <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
           ))}
@@ -381,9 +387,9 @@ function ActivityTab() {
           onChange={(e) => { setActionFilter(e.target.value); setPage(1); }}
           className="admin-filter-select"
         >
-          <option value="">All Actions</option>
-          {Object.entries(ACTION_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
+          <option value="">{t('admin.allActions')}</option>
+          {Object.entries(ACTION_KEYS).map(([k, v]) => (
+            <option key={k} value={k}>{t(v)}</option>
           ))}
         </select>
         <input
@@ -391,33 +397,33 @@ function ActivityTab() {
           value={dateFrom}
           onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
           className="admin-filter-date"
-          placeholder="From"
+          placeholder={t('admin.from')}
         />
         <input
           type="date"
           value={dateTo}
           onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
           className="admin-filter-date"
-          placeholder="To"
+          placeholder={t('admin.to')}
         />
       </div>
 
       {error && <div className="error-message"><XCircle size={16} /> {error}</div>}
 
       {loading ? (
-        <div className="admin-loading"><Loader2 size={18} className="spin" /> Loading activity…</div>
+        <div className="admin-loading"><Loader2 size={18} className="spin" /> {t('admin.loadingActivity')}</div>
       ) : logs.length === 0 ? (
-        <div className="admin-empty">No activity found matching your filters.</div>
+        <div className="admin-empty">{t('admin.noActivity')}</div>
       ) : (
         <>
           <div className="admin-table-wrap">
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>User</th>
-                  <th>Action</th>
-                  <th>Details</th>
-                  <th>Time</th>
+                  <th>{t('admin.colUser')}</th>
+                  <th>{t('admin.colAction')}</th>
+                  <th>{t('admin.colDetails')}</th>
+                  <th>{t('admin.colTime')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -429,7 +435,7 @@ function ActivityTab() {
                         <span className="text-muted admin-user-email">{log.user.email}</span>
                       </div>
                     </td>
-                    <td><span className="admin-action-tag">{actionLabel(log.action)}</span></td>
+                    <td><span className="admin-action-tag">{actionLabel(log.action, t)}</span></td>
                     <td className="text-muted">
                       {log.count != null && `${log.count} item${log.count !== 1 ? 's' : ''}`}
                       {log.metadata && typeof log.metadata === 'object' && Object.entries(log.metadata).map(([k, v]) => (
@@ -437,7 +443,7 @@ function ActivityTab() {
                       ))}
                     </td>
                     <td className="text-muted admin-time-cell">
-                      <span title={new Date(log.createdAt).toLocaleString()}>{timeAgo(log.createdAt)}</span>
+                      <span title={new Date(log.createdAt).toLocaleString()}>{timeAgo(log.createdAt, t)}</span>
                     </td>
                   </tr>
                 ))}
@@ -453,6 +459,7 @@ function ActivityTab() {
 
 // ── Main Admin Panel ─────────────────────────────────────────────────────────
 export default function AdminPanel() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState('users');
   const [stats, setStats] = useState(null);
 
@@ -462,7 +469,7 @@ export default function AdminPanel() {
 
   return (
     <div className="admin-page">
-      <h2 className="admin-title">Admin Panel</h2>
+      <h2 className="admin-title">{t('admin.title')}</h2>
 
       <StatsCards stats={stats} />
 
@@ -471,13 +478,13 @@ export default function AdminPanel() {
           className={`admin-tab ${tab === 'users' ? 'active' : ''}`}
           onClick={() => setTab('users')}
         >
-          <Users size={16} /> Users
+          <Users size={16} /> {t('admin.tabUsers')}
         </button>
         <button
           className={`admin-tab ${tab === 'activity' ? 'active' : ''}`}
           onClick={() => setTab('activity')}
         >
-          <Activity size={16} /> Activity
+          <Activity size={16} /> {t('admin.tabActivity')}
         </button>
       </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Mail, RefreshCw, Unlink, CheckCircle, XCircle, Loader2, ExternalLink, Users, UserPlus, X, Tag, Bell, BellOff, User, Copy, Check } from 'lucide-react';
+import { Mail, RefreshCw, Unlink, CheckCircle, XCircle, Loader2, ExternalLink, Users, UserPlus, X, Tag, Bell, BellOff, User, Copy, Check, Globe } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {
   getSharingConnections, getPendingInvites, sendSharingInvite,
@@ -10,6 +10,7 @@ import {
   isPushSupported, getNotificationPermission,
 } from '../services/push';
 import { DataPrivacyCard } from './ConsentScreen';
+import { useTranslation } from 'react-i18next';
 
 async function fetchGmailStatus() {
   const res = await fetch('/api/gmail/status', { credentials: 'include' });
@@ -40,6 +41,7 @@ const SHARE_CATEGORIES = ['bill', 'government', 'legal', 'medical', 'insurance',
 
 function ProfileCard() {
   const { user } = useAuth();
+  const { t, i18n } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   function handleCopyEmail() {
@@ -50,45 +52,66 @@ function ProfileCard() {
   }
 
   const joined = user?.createdAt
-    ? new Date(user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+    ? new Date(user.createdAt).toLocaleDateString(i18n.language, { year: 'numeric', month: 'long', day: 'numeric' })
     : null;
+
+  const LANGUAGES = [
+    { code: 'en', label: 'English' },
+    { code: 'fr', label: 'Français' },
+    { code: 'de', label: 'Deutsch' },
+  ];
 
   return (
     <div className="integration-card">
       <div className="integration-header">
         <div className="integration-icon profile-icon"><User size={24} /></div>
         <div className="integration-info">
-          <h3>Your Account</h3>
-          <p>Signed in as <strong>{user?.name}</strong></p>
+          <h3>{t('integrations.profile.title')}</h3>
+          <p>{t('integrations.profile.signedInAs', { name: user?.name })}</p>
         </div>
       </div>
 
       <div className="profile-detail-grid">
         <div className="profile-row">
-          <span className="profile-label">Email</span>
+          <span className="profile-label">{t('integrations.profile.email')}</span>
           <span className="profile-value">
             {user?.email}
-            <button className="btn-icon-sm" onClick={handleCopyEmail} title="Copy email">
+            <button className="btn-icon-sm" onClick={handleCopyEmail} title={t('integrations.profile.copyEmail')}>
               {copied ? <Check size={14} /> : <Copy size={14} />}
             </button>
           </span>
         </div>
         <div className="profile-row">
-          <span className="profile-label">Name</span>
+          <span className="profile-label">{t('integrations.profile.name')}</span>
           <span className="profile-value">{user?.name}</span>
         </div>
         {joined && (
           <div className="profile-row">
-            <span className="profile-label">Member since</span>
+            <span className="profile-label">{t('integrations.profile.memberSince')}</span>
             <span className="profile-value">{joined}</span>
           </div>
         )}
+        <div className="profile-row">
+          <span className="profile-label"><Globe size={14} /> {t('integrations.profile.language')}</span>
+          <span className="profile-value">
+            <select
+              className="lang-select"
+              value={i18n.language?.substring(0, 2)}
+              onChange={(e) => i18n.changeLanguage(e.target.value)}
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>{l.label}</option>
+              ))}
+            </select>
+          </span>
+        </div>
       </div>
     </div>
   );
 }
 
 export default function Integrations() {
+  const { t } = useTranslation();
   // ── Gmail state ────────────────────────────────────────────────────────────
   const [gmail, setGmail]               = useState(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
@@ -141,7 +164,7 @@ export default function Integrations() {
     }
     fetchGmailStatus()
       .then(setGmail)
-      .catch(() => setGmailError('Could not load Gmail status'))
+      .catch(() => setGmailError(t('integrations.gmail.loadError')))
       .finally(() => setLoadingStatus(false));
   }, []);
 
@@ -217,8 +240,8 @@ export default function Integrations() {
       const result = await sendSharingInvite(inviteEmail.trim());
       setInviteEmail('');
       setInviteSuccess(result.autoAccepted
-        ? `Connected with ${result.connection?.toUser?.name || result.reverse?.fromUser?.name || inviteEmail}! Both of you can now manage what you share.`
-        : `Invite sent to ${inviteEmail.trim()}.`);
+        ? t('integrations.sharing.inviteAutoSuccess', { name: result.connection?.toUser?.name || result.reverse?.fromUser?.name || inviteEmail })
+        : t('integrations.sharing.inviteSentSuccess', { email: inviteEmail.trim() }));
       await loadSharing();
     } catch (err) { setInviteError(err.message); }
     finally { setInviteLoading(false); }
@@ -235,7 +258,7 @@ export default function Integrations() {
   }
 
   async function handleDisconnectSharing(id) {
-    if (!confirm('Remove this sharing connection?')) return;
+    if (!confirm(t('integrations.sharing.confirmRemove'))) return;
     try { await removeConnection(id); await loadSharing(); }
     catch (err) { setInviteError(err.message); }
   }
@@ -282,7 +305,7 @@ export default function Integrations() {
 
   return (
     <div className="integrations-page">
-      <h2 className="integrations-title">Settings</h2>
+      <h2 className="integrations-title">{t('integrations.pageTitle')}</h2>
 
       {/* ── Profile ───────────────────────────────────────────────────────── */}
       <ProfileCard />
@@ -292,67 +315,67 @@ export default function Integrations() {
         <div className="integration-header">
           <div className="integration-icon gmail-icon"><Mail size={24} /></div>
           <div className="integration-info">
-            <h3>Gmail</h3>
-            <p>Sync actionable emails — invoices, bills, reminders, and letters with attachments — directly into your Robin inbox.</p>
+            <h3>{t('integrations.gmail.title')}</h3>
+            <p>{t('integrations.gmail.description')}</p>
           </div>
         </div>
 
         {loadingStatus ? (
-          <div className="integration-loading"><Loader2 size={18} className="spin" /> Loading…</div>
+          <div className="integration-loading"><Loader2 size={18} className="spin" /> {t('common.loading')}</div>
         ) : gmail?.connected ? (
           <>
             <div className="integration-status connected">
               <CheckCircle size={16} />
-              <span>Connected as <strong>{gmail.email}</strong></span>
+              <span>{t('integrations.gmail.connectedAs', { email: gmail.email })}</span>
             </div>
             <div className="integration-how">
-              <h4>How it works</h4>
+              <h4>{t('integrations.gmail.howItWorks')}</h4>
               <ul>
-                <li>Scans your last 7 days of Primary &amp; Updates inbox</li>
-                <li>Automatically skips newsletters, promotions, and social emails</li>
-                <li>Uses AI to identify emails that genuinely need your attention</li>
-                <li>Analyzes email body and any PDF/image attachments</li>
-                <li>Results appear in your Dashboard alongside scanned mail</li>
+                <li>{t('integrations.gmail.howStep1')}</li>
+                <li>{t('integrations.gmail.howStep2')}</li>
+                <li>{t('integrations.gmail.howStep3')}</li>
+                <li>{t('integrations.gmail.howStep4')}</li>
+                <li>{t('integrations.gmail.howStep5')}</li>
               </ul>
             </div>
             {syncResult && syncResult.status === 'completed' && (
               <div className="sync-result">
                 <CheckCircle size={16} />
-                <span>Checked {syncResult.scanned} email{syncResult.scanned !== 1 ? 's' : ''}, imported {syncResult.found} item{syncResult.found !== 1 ? 's' : ''}.</span>
+                <span>{t('integrations.gmail.syncResult', { checked: syncResult.scanned, imported: syncResult.found })}</span>
               </div>
             )}
             {syncResult && syncResult.status === 'in_progress' && (
               <div className="sync-result syncing">
                 <Loader2 size={16} className="spin" />
-                <span>Syncing… {syncResult.scanned > 0 ? `${syncResult.scanned} checked so far` : 'starting'}</span>
+                <span>{t('integrations.gmail.syncing')} {syncResult.scanned > 0 ? t('integrations.gmail.syncProgress', { count: syncResult.scanned }) : t('integrations.gmail.syncStarting')}</span>
               </div>
             )}
             {syncResult && syncResult.status === 'error' && (
-              <div className="error-message"><XCircle size={16} /> Sync failed: {syncResult.error || 'Unknown error'}</div>
+              <div className="error-message"><XCircle size={16} /> {t('integrations.gmail.syncFailed')}{syncResult.error || t('integrations.gmail.unknownError')}</div>
             )}
             {gmailError && <div className="error-message"><XCircle size={16} /> {gmailError}</div>}
             <div className="integration-actions">
               <button className="btn btn-primary" onClick={handleSync} disabled={syncing}>
-                {syncing ? <><Loader2 size={16} className="spin" /> Syncing…</> : <><RefreshCw size={16} /> Sync Now</>}
+                {syncing ? <><Loader2 size={16} className="spin" /> {t('integrations.gmail.syncingBtn')}</> : <><RefreshCw size={16} /> {t('integrations.gmail.syncNow')}</>}
               </button>
               <button className="btn btn-ghost disconnect-btn" onClick={handleGmailDisconnect} disabled={disconnecting}>
-                {disconnecting ? <><Loader2 size={16} className="spin" /> Disconnecting…</> : <><Unlink size={16} /> Disconnect</>}
+                {disconnecting ? <><Loader2 size={16} className="spin" /> {t('integrations.gmail.disconnecting')}</> : <><Unlink size={16} /> {t('integrations.gmail.disconnect')}</>}
               </button>
             </div>
           </>
         ) : (
           <>
-            <div className="integration-status disconnected"><XCircle size={16} /><span>Not connected</span></div>
+            <div className="integration-status disconnected"><XCircle size={16} /><span>{t('integrations.gmail.disconnected')}</span></div>
             {gmailError && <div className="error-message"><XCircle size={16} /> {gmailError}</div>}
             <div className="integration-how">
-              <h4>What you'll need</h4>
+              <h4>{t('integrations.gmail.whatYouNeed')}</h4>
               <ul>
-                <li>A Google account with a Gmail inbox</li>
-                <li>Robin will only request <strong>read-only</strong> access — it cannot send or delete emails</li>
+                <li>{t('integrations.gmail.needStep1')}</li>
+                <li>{t('integrations.gmail.needStep2')}</li>
               </ul>
             </div>
             <div className="integration-actions">
-              <a href="/api/gmail/auth" className="btn btn-primary"><ExternalLink size={16} /> Connect Gmail</a>
+              <a href="/api/gmail/auth" className="btn btn-primary"><ExternalLink size={16} /> {t('integrations.gmail.connectGmail')}</a>
             </div>
           </>
         )}
@@ -363,19 +386,19 @@ export default function Integrations() {
         <div className="integration-header">
           <div className="integration-icon sharing-icon"><Users size={24} /></div>
           <div className="integration-info">
-            <h3>Dashboard Sharing</h3>
-            <p>Share your mail with a partner, family member, or flatmate. They get a read-only view of what you choose to share.</p>
+            <h3>{t('integrations.sharing.title')}</h3>
+            <p>{t('integrations.sharing.description')}</p>
           </div>
         </div>
 
         {sharingLoading ? (
-          <div className="integration-loading"><Loader2 size={18} className="spin" /> Loading…</div>
+          <div className="integration-loading"><Loader2 size={18} className="spin" /> {t('common.loading')}</div>
         ) : (
           <>
             {/* Pending invites received */}
             {pendingInvites.length > 0 && (
               <div className="sharing-section">
-                <h4 className="sharing-section-title">Pending invites</h4>
+                <h4 className="sharing-section-title">{t('integrations.sharing.pendingInvites')}</h4>
                 {pendingInvites.map((inv) => (
                   <div key={inv.id} className="sharing-invite-row">
                     <div className="sharing-user">
@@ -383,8 +406,8 @@ export default function Integrations() {
                       <span>{inv.fromUser.email}</span>
                     </div>
                     <div className="sharing-invite-actions">
-                      <button className="btn btn-sm btn-primary" onClick={() => handleAcceptInvite(inv.id)}>Accept</button>
-                      <button className="btn btn-sm btn-ghost" onClick={() => handleRejectInvite(inv.id)}>Decline</button>
+                      <button className="btn btn-sm btn-primary" onClick={() => handleAcceptInvite(inv.id)}>{t('integrations.sharing.accept')}</button>
+                      <button className="btn btn-sm btn-ghost" onClick={() => handleRejectInvite(inv.id)}>{t('integrations.sharing.decline')}</button>
                     </div>
                   </div>
                 ))}
@@ -395,7 +418,7 @@ export default function Integrations() {
             {sentConns.filter((c) => c.status === 'accepted').length > 0 && (
               <div className="sharing-section">
                 <h4 className="sharing-section-title">
-                  <Tag size={14} /> You are sharing with
+                  <Tag size={14} /> {t('integrations.sharing.sharingWith')}
                 </h4>
                 {sentConns.filter((c) => c.status === 'accepted').map((conn) => {
                   const cats = conn.sharedCategories || [];
@@ -407,11 +430,11 @@ export default function Integrations() {
                           <strong>{conn.toUser.name}</strong>
                           <span>{conn.toUser.email}</span>
                         </div>
-                        <button className="btn-icon-sm" onClick={() => handleDisconnectSharing(conn.id)} title="Remove connection">
+                        <button className="btn-icon-sm" onClick={() => handleDisconnectSharing(conn.id)} title={t('integrations.sharing.removeConnection')}>
                           <X size={16} />
                         </button>
                       </div>
-                      <div className="sharing-cats-label">Auto-share categories:</div>
+                      <div className="sharing-cats-label">{t('integrations.sharing.autoShareLabel')}</div>
                       <div className="sharing-cats">
                         {SHARE_CATEGORIES.map((cat) => (
                           <button
@@ -426,8 +449,8 @@ export default function Integrations() {
                       </div>
                       <p className="sharing-cats-hint">
                         {cats.length === 0
-                          ? 'No categories auto-shared — use the share button on individual mail items.'
-                          : `Auto-sharing: ${cats.join(', ')}. You can also share individual items manually.`}
+                          ? t('integrations.sharing.noCatsHint')
+                          : t('integrations.sharing.catsHint', { cats: cats.join(', ') })}
                       </p>
                     </div>
                   );
@@ -438,14 +461,14 @@ export default function Integrations() {
             {/* Pending invites I sent */}
             {sentConns.filter((c) => c.status === 'pending').length > 0 && (
               <div className="sharing-section">
-                <h4 className="sharing-section-title">Pending (awaiting response)</h4>
+                <h4 className="sharing-section-title">{t('integrations.sharing.pendingAwaiting')}</h4>
                 {sentConns.filter((c) => c.status === 'pending').map((conn) => (
                   <div key={conn.id} className="sharing-invite-row">
                     <div className="sharing-user">
                       <strong>{conn.toUser.name}</strong>
                       <span>{conn.toUser.email}</span>
                     </div>
-                    <button className="btn btn-sm btn-ghost" onClick={() => handleDisconnectSharing(conn.id)}>Cancel</button>
+                    <button className="btn btn-sm btn-ghost" onClick={() => handleDisconnectSharing(conn.id)}>{t('common.cancel')}</button>
                   </div>
                 ))}
               </div>
@@ -454,7 +477,7 @@ export default function Integrations() {
             {/* Connections sharing TO me */}
             {receivedConns.length > 0 && (
               <div className="sharing-section">
-                <h4 className="sharing-section-title">Shared with you by</h4>
+                <h4 className="sharing-section-title">{t('integrations.sharing.sharedWithYouBy')}</h4>
                 {receivedConns.map((conn) => (
                   <div key={conn.id} className="sharing-invite-row">
                     <div className="sharing-user">
@@ -462,7 +485,7 @@ export default function Integrations() {
                       <span>{conn.fromUser.email}</span>
                     </div>
                     <button className="btn btn-sm btn-ghost disconnect-btn" onClick={() => handleDisconnectSharing(conn.id)}>
-                      <Unlink size={14} /> Remove
+                      <Unlink size={14} /> {t('integrations.sharing.remove')}
                     </button>
                   </div>
                 ))}
@@ -474,21 +497,21 @@ export default function Integrations() {
 
             {/* Invite form */}
             <div className="sharing-section">
-              <h4 className="sharing-section-title">Invite someone</h4>
+              <h4 className="sharing-section-title">{t('integrations.sharing.inviteTitle')}</h4>
               <form className="sharing-invite-form" onSubmit={handleInvite}>
                 <input
                   ref={inviteInputRef}
                   type="email"
-                  placeholder="their@email.com"
+                  placeholder={t('integrations.sharing.invitePlaceholder')}
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   required
                 />
                 <button type="submit" className="btn btn-primary" disabled={inviteLoading}>
-                  {inviteLoading ? <><Loader2 size={16} className="spin" /> Sending…</> : <><UserPlus size={16} /> Send Invite</>}
+                  {inviteLoading ? <><Loader2 size={16} className="spin" /> {t('integrations.sharing.sending')}</> : <><UserPlus size={16} /> {t('integrations.sharing.sendInvite')}</>}
                 </button>
               </form>
-              <p className="sharing-cats-hint">They need a Robin account. Once accepted, you'll each control what you share.</p>
+              <p className="sharing-cats-hint">{t('integrations.sharing.inviteHint')}</p>
             </div>
           </>
         )}
@@ -501,28 +524,28 @@ export default function Integrations() {
             {pushSubscribed ? <Bell size={24} /> : <BellOff size={24} />}
           </div>
           <div className="integration-info">
-            <h3>Push Notifications</h3>
-            <p>Get notified on this device when a reminder is due or a deadline has passed without action — even when the app is closed.</p>
+            <h3>{t('integrations.push.title')}</h3>
+            <p>{t('integrations.push.description')}</p>
           </div>
         </div>
 
         {!pushSupported ? (
           <div className="integration-note">
-            <XCircle size={15} /> Push notifications are not supported in this browser.
+            <XCircle size={15} /> {t('integrations.push.notSupported')}
           </div>
         ) : !serverPushEnabled ? (
           <div className="integration-note">
-            <XCircle size={15} /> Push notifications are not configured on the server. Set <code>VAPID_PUBLIC_KEY</code>, <code>VAPID_PRIVATE_KEY</code>, and <code>VAPID_EMAIL</code> in your <code>.env</code> file.
+            <XCircle size={15} /> {t('integrations.push.notConfigured')}
           </div>
         ) : pushPermission === 'denied' ? (
           <div className="integration-note warn">
-            <XCircle size={15} /> Notification permission was denied. Please enable it in your browser settings and reload.
+            <XCircle size={15} /> {t('integrations.push.permissionDenied')}
           </div>
         ) : (
           <div className="integration-actions">
             <div className="notif-status-row">
               <div className={`notif-status-dot ${pushSubscribed ? 'on' : 'off'}`} />
-              <span>{pushSubscribed ? 'Notifications enabled on this device' : 'Notifications are off'}</span>
+              <span>{pushSubscribed ? t('integrations.push.enabled') : t('integrations.push.disabled')}</span>
             </div>
 
             {pushSubscribed ? (
@@ -532,7 +555,7 @@ export default function Integrations() {
                 disabled={pushLoading}
               >
                 {pushLoading ? <Loader2 size={14} className="spin" /> : <BellOff size={14} />}
-                Turn off
+                {t('integrations.push.turnOff')}
               </button>
             ) : (
               <button
@@ -540,7 +563,7 @@ export default function Integrations() {
                 onClick={handleEnableNotifications}
                 disabled={pushLoading}
               >
-                {pushLoading ? <><Loader2 size={16} className="spin" /> Enabling…</> : <><Bell size={16} /> Enable notifications</>}
+                {pushLoading ? <><Loader2 size={16} className="spin" /> {t('integrations.push.enabling')}</> : <><Bell size={16} /> {t('integrations.push.enable')}</>}
               </button>
             )}
           </div>
@@ -548,10 +571,10 @@ export default function Integrations() {
 
         {pushSubscribed && (
           <div className="notif-info-list">
-            <p className="notif-info-title">You will be notified when:</p>
+            <p className="notif-info-title">{t('integrations.push.notifyTitle')}</p>
             <ul>
-              <li>⏰ A reminder you set is due</li>
-              <li>🚨 A due date has passed and you haven't acted yet</li>
+              <li>{t('integrations.push.notifyReminder')}</li>
+              <li>{t('integrations.push.notifyOverdue')}</li>
             </ul>
           </div>
         )}

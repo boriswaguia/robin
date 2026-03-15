@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Shield, FileText, Download, Trash2, Loader2, AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const TERMS_VERSION = '1.1';
 
@@ -114,6 +115,7 @@ For any data protection inquiries or to exercise your GDPR rights, contact the a
 `;
 
 export default function ConsentScreen({ onConsent }) {
+  const { t } = useTranslation();
   const [accepted, setAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -144,7 +146,7 @@ export default function ConsentScreen({ onConsent }) {
       <div className="consent-card">
         <div className="consent-header">
           <Shield size={28} />
-          <h2>Terms & Privacy</h2>
+          <h2>{t('consent.header')}</h2>
         </div>
 
         <div className="consent-body">
@@ -154,7 +156,7 @@ export default function ConsentScreen({ onConsent }) {
         <div className="consent-disclaimer">
           <AlertTriangle size={16} />
           <span>
-            <strong>Important:</strong> By checking the box below you acknowledge that the developer(s) take no ownership or responsibility for any damage arising from the use of this application.
+            <strong>{t('consent.important')}</strong> {t('consent.disclaimer')}
           </span>
         </div>
 
@@ -165,7 +167,7 @@ export default function ConsentScreen({ onConsent }) {
             onChange={(e) => setAccepted(e.target.checked)}
           />
           <span>
-            I have read and accept the Terms of Use and Privacy Notice. I consent to my data being processed as described above, including the sending of my mail images, email content, and attachments to Google Gemini AI for analysis. I understand I can withdraw consent and delete all my data at any time.
+            {t('consent.checkboxLabel')}
           </span>
         </label>
 
@@ -177,9 +179,9 @@ export default function ConsentScreen({ onConsent }) {
           disabled={!accepted || loading}
         >
           {loading ? (
-            <><Loader2 size={18} className="spin" /> Accepting…</>
+            <><Loader2 size={18} className="spin" /> {t('consent.accepting')}</>
           ) : (
-            <><FileText size={18} /> Accept & Continue</>
+            <><FileText size={18} /> {t('consent.acceptContinue')}</>
           )}
         </button>
       </div>
@@ -214,6 +216,7 @@ function inlineMd(text) {
  * Data privacy actions — shown in the Integrations page.
  */
 export function DataPrivacyCard() {
+  const { t } = useTranslation();
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -230,7 +233,7 @@ export function DataPrivacyCard() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert('Export failed: ' + err.message);
+      alert(t('privacy.exportFailed') + err.message);
     } finally {
       setExporting(false);
     }
@@ -238,17 +241,11 @@ export function DataPrivacyCard() {
 
   async function handleDeleteAccount() {
     const confirmed = confirm(
-      'PERMANENTLY DELETE YOUR ACCOUNT?\n\n' +
-      'This will irreversibly delete:\n' +
-      '• Your account and profile\n' +
-      '• All scanned mail and analysis\n' +
-      '• All uploaded images\n' +
-      '• All sharing connections\n\n' +
-      'This action cannot be undone. Type "delete" in the next prompt to confirm.'
+      t('privacy.confirmDeleteTitle') + '\n\n' + t('privacy.confirmDeleteBody')
     );
     if (!confirmed) return;
 
-    const typed = prompt('Type "delete" to confirm permanent account deletion:');
+    const typed = prompt(t('privacy.confirmDeletePrompt'));
     if (typed?.toLowerCase() !== 'delete') return;
 
     setDeleting(true);
@@ -258,10 +255,9 @@ export function DataPrivacyCard() {
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Deletion failed');
-      // Reload to trigger logout
       window.location.reload();
     } catch (err) {
-      alert('Failed to delete account: ' + err.message);
+      alert(t('privacy.deleteFailed') + err.message);
       setDeleting(false);
     }
   }
@@ -271,16 +267,16 @@ export function DataPrivacyCard() {
       <div className="integration-header">
         <div className="integration-icon privacy-icon"><Shield size={24} /></div>
         <div className="integration-info">
-          <h3>Data & Privacy</h3>
-          <p>GDPR rights — export or delete your personal data. Your data is encrypted at rest.</p>
+          <h3>{t('privacy.dataPrivacy')}</h3>
+          <p>{t('privacy.dataPrivacyDesc')}</p>
         </div>
       </div>
       <div className="privacy-actions">
         <button className="btn btn-secondary" onClick={handleExport} disabled={exporting}>
-          {exporting ? <><Loader2 size={16} className="spin" /> Exporting…</> : <><Download size={16} /> Export My Data</>}
+          {exporting ? <><Loader2 size={16} className="spin" /> {t('privacy.exporting')}</> : <><Download size={16} /> {t('privacy.exportData')}</>}
         </button>
         <button className="btn btn-danger" onClick={handleDeleteAccount} disabled={deleting}>
-          {deleting ? <><Loader2 size={16} className="spin" /> Deleting…</> : <><Trash2 size={16} /> Delete My Account</>}
+          {deleting ? <><Loader2 size={16} className="spin" /> {t('privacy.deleting')}</> : <><Trash2 size={16} /> {t('privacy.deleteAccount')}</>}
         </button>
       </div>
     </div>

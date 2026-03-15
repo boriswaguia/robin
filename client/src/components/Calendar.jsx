@@ -4,11 +4,12 @@ import { ChevronLeft, ChevronRight, CalendarPlus } from 'lucide-react';
 import { getAllMail } from '../services/api';
 import { getCategoryColor, getCategoryIcon } from '../utils';
 import { downloadCalendarEvent } from '../services/calendar';
+import { useTranslation } from 'react-i18next';
 
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+const DAY_KEYS = ['calendar.mon', 'calendar.tue', 'calendar.wed', 'calendar.thu', 'calendar.fri', 'calendar.sat', 'calendar.sun'];
+const MONTH_KEYS = [
+  'calendar.january', 'calendar.february', 'calendar.march', 'calendar.april', 'calendar.may', 'calendar.june',
+  'calendar.july', 'calendar.august', 'calendar.september', 'calendar.october', 'calendar.november', 'calendar.december',
 ];
 
 function toDateKey(date) {
@@ -17,6 +18,7 @@ function toDateKey(date) {
 }
 
 export default function Calendar() {
+  const { t } = useTranslation();
   const [mail, setMail] = useState([]);
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(() => {
@@ -110,7 +112,7 @@ export default function Calendar() {
     .filter((d) => d.inMonth && eventsByDate[d.key])
     .reduce((sum, d) => sum + eventsByDate[d.key].length, 0);
 
-  if (loading) return <div className="loading">Loading calendar…</div>;
+  if (loading) return <div className="loading">{t('calendar.loadingCalendar')}</div>;
 
   return (
     <div className="calendar-page">
@@ -119,9 +121,9 @@ export default function Calendar() {
           <ChevronLeft size={20} />
         </button>
         <div className="cal-title">
-          <h2>{MONTHS[current.month]} {current.year}</h2>
+          <h2>{t(MONTH_KEYS[current.month])} {current.year}</h2>
           <span className="cal-subtitle">
-            {monthEventCount} {monthEventCount === 1 ? 'event' : 'events'}
+            {t(monthEventCount === 1 ? 'calendar.eventCount_one' : 'calendar.eventCount_other', { count: monthEventCount })}
           </span>
         </div>
         <button className="cal-nav-btn" onClick={nextMonth}>
@@ -129,11 +131,11 @@ export default function Calendar() {
         </button>
       </div>
 
-      <button className="today-btn" onClick={goToday}>Today</button>
+      <button className="today-btn" onClick={goToday}>{t('calendar.todayBtn')}</button>
 
       <div className="calendar-grid">
-        {DAYS.map((d) => (
-          <div key={d} className="cal-day-header">{d}</div>
+        {DAY_KEYS.map((dk) => (
+          <div key={dk} className="cal-day-header">{t(dk)}</div>
         ))}
         {calendarDays.map((day) => {
           const events = eventsByDate[day.key] || [];
@@ -172,7 +174,7 @@ export default function Calendar() {
             })}
           </h3>
           {selectedEvents.length === 0 ? (
-            <p className="no-events">No events on this day</p>
+            <p className="no-events">{t('calendar.noEvents')}</p>
           ) : (
             selectedEvents.map((item) => (
               <div key={item.id} className="cal-event-card">
@@ -180,14 +182,14 @@ export default function Calendar() {
                   <span className={`category-badge ${getCategoryColor(item.category)}`}>
                     {getCategoryIcon(item.category)} {item.category}
                   </span>
-                  <h4>{item.sender || 'Unknown'}</h4>
+                  <h4>{item.sender || t('calendar.unknown')}</h4>
                   <p>{item.summary}</p>
                   {item.amountDue && <span className="amount">{item.amountDue}</span>}
                 </Link>
                 <button
                   className="cal-export-btn"
                   onClick={() => downloadCalendarEvent(item)}
-                  title="Export to calendar app"
+                  title={t('calendar.exportCalendar')}
                 >
                   <CalendarPlus size={16} />
                 </button>

@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Inbox, ScanLine, ChevronRight, AlertTriangle, Search, X, Bell, Users, ChevronDown, ChevronUp } from 'lucide-react';
 import { getAllMail, getDueReminders, getSharedWithMe } from '../services/api';
+import { useTranslation } from 'react-i18next';
 import MailCard from './MailCard';
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const [mail, setMail] = useState([]);          // all mail (source of truth)
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -118,20 +120,20 @@ export default function Dashboard() {
    .slice().sort(prioritySort);
 
   if (loading) {
-    return <div className="loading">Loading your mail…</div>;
+    return <div className="loading">{t('dashboard.loadingMail')}</div>;
   }
 
   return (
     <div className="dashboard">
       {reminders.filter((r) => !dismissedReminders.has(r.id)).length > 0 && (
         <div className="reminders-banner">
-          <div className="reminders-title"><Bell size={16} /> Reminders</div>
+          <div className="reminders-title"><Bell size={16} /> {t('dashboard.reminders')}</div>
           {reminders.filter((r) => !dismissedReminders.has(r.id)).map((r) => (
             <Link to={`/mail/${r.id}`} key={r.id} className="reminder-item">
               <div className="reminder-content">
-                <strong>{r.sender || 'Mail'}</strong>
-                <span>{r.summary || 'Reminder due'}</span>
-                {r.dueDate && <span className="reminder-due">Due: {new Date(r.dueDate).toLocaleDateString()}</span>}
+                <strong>{r.sender || t('dashboard.mail')}</strong>
+                <span>{r.summary || t('dashboard.reminderDue')}</span>
+                {r.dueDate && <span className="reminder-due">{t('dashboard.duePrefix')}{new Date(r.dueDate).toLocaleDateString()}</span>}
               </div>
               <button className="reminder-dismiss" onClick={(e) => { e.preventDefault(); setDismissedReminders((prev) => new Set([...prev, r.id])); }}>
                 <X size={14} />
@@ -147,20 +149,20 @@ export default function Dashboard() {
             <Inbox size={20} />
             <div>
               <span className="stat-number">{newCount}</span>
-              <span className="stat-label">Action needed</span>
+              <span className="stat-label">{t('dashboard.actionNeeded')}</span>
             </div>
           </div>
           <div className="stat-card">
             <Inbox size={20} />
             <div>
               <span className="stat-number">{mail.length}</span>
-              <span className="stat-label">Total</span>
+              <span className="stat-label">{t('dashboard.total')}</span>
             </div>
           </div>
           <button className="stat-card search-toggle" onClick={() => setShowSearch(!showSearch)}>
             <Search size={20} />
             <div>
-              <span className="stat-label">Search</span>
+              <span className="stat-label">{t('dashboard.search')}</span>
             </div>
           </button>
         </div>
@@ -172,25 +174,25 @@ export default function Dashboard() {
             <Search size={16} />
             <input
               type="text"
-              placeholder="Search all mail…"
+              placeholder={t('dashboard.searchPlaceholder')}
               value={searchParams.q}
               onChange={(e) => setSearchParams({ ...searchParams, q: e.target.value })}
               autoFocus
             />
-            <button type="button" className="search-clear" onClick={clearSearch} title="Clear search">
+            <button type="button" className="search-clear" onClick={clearSearch} title={t('dashboard.clearSearch')}>
               <X size={16} />
             </button>
           </div>
           <div className="search-filters">
             <input
               type="text"
-              placeholder="Sender"
+              placeholder={t('dashboard.sender')}
               value={searchParams.sender}
               onChange={(e) => setSearchParams({ ...searchParams, sender: e.target.value })}
             />
             <input
               type="text"
-              placeholder="Receiver"
+              placeholder={t('dashboard.receiver')}
               value={searchParams.receiver}
               onChange={(e) => setSearchParams({ ...searchParams, receiver: e.target.value })}
             />
@@ -198,13 +200,13 @@ export default function Dashboard() {
               type="date"
               value={searchParams.dateFrom}
               onChange={(e) => setSearchParams({ ...searchParams, dateFrom: e.target.value })}
-              title="From date"
+              title={t('dashboard.fromDate')}
             />
             <input
               type="date"
               value={searchParams.dateTo}
               onChange={(e) => setSearchParams({ ...searchParams, dateTo: e.target.value })}
-              title="To date"
+              title={t('dashboard.toDate')}
             />
           </div>
         </div>
@@ -212,13 +214,13 @@ export default function Dashboard() {
 
       {mail.length > 0 && (
         <div className="filter-bar">
-          {['all', 'bill', 'personal', 'government', 'financial', 'medical', 'delivery', 'reminder'].map((f) => (
+          {[['all', t('dashboard.filterAll')], ['bill', t('dashboard.filterBill')], ['personal', t('dashboard.filterPersonal')], ['government', t('dashboard.filterGovernment')], ['financial', t('dashboard.filterFinancial')], ['medical', t('dashboard.filterMedical')], ['delivery', t('dashboard.filterDelivery')], ['reminder', t('dashboard.filterReminder')]].map(([f, label]) => (
             <button
               key={f}
               className={`filter-chip ${filter === f ? 'active' : ''}`}
               onClick={() => setFilter(f)}
             >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
+              {label}
             </button>
           ))}
         </div>
@@ -227,11 +229,11 @@ export default function Dashboard() {
       {mail.length === 0 ? (
         <div className="empty-state">
           <Inbox size={64} strokeWidth={1} />
-          <h3>No mail scanned yet</h3>
-          <p>Scan your first piece of mail to get started</p>
+          <h3>{t('dashboard.noMailTitle')}</h3>
+          <p>{t('dashboard.noMailDesc')}</p>
           <Link to="/scan" className="btn btn-primary">
             <ScanLine size={20} />
-            <span>Scan Mail</span>
+            <span>{t('dashboard.scanMail')}</span>
           </Link>
         </div>
       ) : (
@@ -243,7 +245,7 @@ export default function Dashboard() {
             </Link>
           ))}
           {filtered.length === 0 && (
-            <p className="no-results">No mail matches this filter.</p>
+            <p className="no-results">{t('dashboard.noResults')}</p>
           )}
         </div>
       )}
@@ -253,7 +255,7 @@ export default function Dashboard() {
         <div className="shared-section">
           <button className="shared-section-header" onClick={() => setSharedExpanded((v) => !v)}>
             <Users size={16} />
-            <span>Shared with you ({sharedMail.length})</span>
+            <span>{t('dashboard.sharedWithYou')} ({sharedMail.length})</span>
             {sharedExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
           {sharedExpanded && (

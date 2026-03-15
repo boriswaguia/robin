@@ -2,10 +2,12 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, MicOff, Square, Play, Pause, Trash2, Loader2, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { submitVoiceMemo } from '../services/api';
+import { useTranslation } from 'react-i18next';
 
 const MAX_SECONDS = 120; // 2 minute cap
 
 export default function VoiceRecorder() {
+  const { t } = useTranslation();
   const [phase, setPhase] = useState('idle'); // idle | requesting | recording | preview | analyzing
   const [seconds, setSeconds] = useState(0);
   const [audioUrl, setAudioUrl] = useState(null);
@@ -83,10 +85,10 @@ export default function VoiceRecorder() {
     } catch (err) {
       const msg =
         err.name === 'NotAllowedError'
-          ? 'Microphone access denied. Please allow microphone access in your browser settings.'
+          ? t('voice.errorDenied')
           : err.name === 'NotFoundError'
-          ? 'No microphone found. Please connect a microphone and try again.'
-          : `Could not start recording: ${err.message}`;
+          ? t('voice.errorNotFound')
+          : t('voice.errorGeneric', { message: err.message });
       setError(msg);
       setPhase('idle');
     }
@@ -123,7 +125,7 @@ export default function VoiceRecorder() {
   async function handleAnalyze() {
     if (!audioBlob) return;
     if (seconds < 1) {
-      setError('Recording is too short. Please record at least 1 second.');
+      setError(t('voice.errorTooShort'));
       return;
     }
     setPhase('analyzing');
@@ -146,10 +148,10 @@ export default function VoiceRecorder() {
           <div className="voice-icon-ring">
             <Mic size={36} />
           </div>
-          <p className="voice-hint">Tap to start recording your reminder</p>
-          <p className="voice-hint-sub">Speak naturally — Robin will extract the date, amount, and key details</p>
+          <p className="voice-hint">{t('voice.idleHint')}</p>
+          <p className="voice-hint-sub">{t('voice.idleSub')}</p>
           <button className="btn btn-primary voice-start-btn" onClick={startRecording}>
-            <Mic size={20} /> Start Recording
+            <Mic size={20} /> {t('voice.startRecording')}
           </button>
         </div>
       )}
@@ -157,7 +159,7 @@ export default function VoiceRecorder() {
       {phase === 'requesting' && (
         <div className="voice-idle">
           <Loader2 size={36} className="spin voice-loader" />
-          <p className="voice-hint">Requesting microphone access…</p>
+          <p className="voice-hint">{t('voice.requesting')}</p>
         </div>
       )}
 
@@ -169,12 +171,12 @@ export default function VoiceRecorder() {
             ))}
           </div>
           <div className="voice-timer">{formatTime(seconds)}</div>
-          <p className="voice-hint recording-hint">Recording… speak your reminder</p>
+          <p className="voice-hint recording-hint">{t('voice.recordingHint')}</p>
           {seconds >= MAX_SECONDS - 10 && (
-            <p className="voice-limit-warn">Max 2 minutes — finalizing soon</p>
+            <p className="voice-limit-warn">{t('voice.limitWarn')}</p>
           )}
           <button className="btn btn-danger voice-stop-btn" onClick={stopRecording}>
-            <Square size={18} fill="currentColor" /> Stop Recording
+            <Square size={18} fill="currentColor" /> {t('voice.stopRecording')}
           </button>
         </div>
       )}
@@ -183,7 +185,7 @@ export default function VoiceRecorder() {
         <div className="voice-preview">
           <div className="voice-preview-header">
             <Mic size={20} />
-            <span>Recording complete — {formatTime(seconds)}</span>
+            <span>{t('voice.recordingComplete', { time: formatTime(seconds) })}</span>
           </div>
 
           {/* Hidden audio element for playback */}
@@ -202,7 +204,7 @@ export default function VoiceRecorder() {
               disabled={phase === 'analyzing'}
             >
               {isPlaying ? <Pause size={18} /> : <Play size={18} />}
-              {isPlaying ? 'Pause' : 'Play back'}
+              {isPlaying ? t('voice.pause') : t('voice.playBack')}
             </button>
           </div>
 
@@ -214,7 +216,7 @@ export default function VoiceRecorder() {
               onClick={discard}
               disabled={phase === 'analyzing'}
             >
-              <Trash2 size={16} /> Discard
+              <Trash2 size={16} /> {t('voice.discard')}
             </button>
             <button
               className="btn btn-primary"
@@ -222,16 +224,16 @@ export default function VoiceRecorder() {
               disabled={phase === 'analyzing'}
             >
               {phase === 'analyzing' ? (
-                <><Loader2 size={18} className="spin" /> Analyzing…</>
+                <><Loader2 size={18} className="spin" /> {t('voice.analyzing')}</>
               ) : (
-                <><Sparkles size={18} /> Analyze & Save</>
+                <><Sparkles size={18} /> {t('voice.analyzeSave')}</>
               )}
             </button>
           </div>
 
           {phase === 'analyzing' && (
             <p className="voice-analyzing-hint">
-              Robin is transcribing your memo and extracting reminder details…
+              {t('voice.analyzingHint')}
             </p>
           )}
         </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Mail, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 export default function AuthPage() {
   const [mode, setMode] = useState('login'); // 'login' | 'register'
@@ -11,6 +12,7 @@ export default function AuthPage() {
   const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
+  const { t } = useTranslation();
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -33,7 +35,7 @@ export default function AuthPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Something went wrong');
+        throw new Error(data.error || t('common.error'));
       }
 
       // Token is in an httpOnly cookie — we only get the user object back
@@ -51,7 +53,7 @@ export default function AuthPage() {
         <div className="auth-logo">
           <Mail size={36} />
           <h1>Robin</h1>
-          <p>Smart Mail Scanner</p>
+          <p>{t('auth.smartMailScanner')}</p>
         </div>
 
         <div className="auth-tabs">
@@ -59,52 +61,52 @@ export default function AuthPage() {
             className={`auth-tab ${mode === 'login' ? 'active' : ''}`}
             onClick={() => { setMode('login'); setError(null); }}
           >
-            Sign In
+            {t('auth.signIn')}
           </button>
           <button
             className={`auth-tab ${mode === 'register' ? 'active' : ''}`}
             onClick={() => { setMode('register'); setError(null); }}
           >
-            Create Account
+            {t('auth.createAccount')}
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
           {mode === 'register' && (
             <div className="form-group">
-              <label htmlFor="name">Name</label>
+              <label htmlFor="name">{t('auth.name')}</label>
               <input
                 id="name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
+                placeholder={t('auth.namePlaceholder')}
                 required
               />
             </div>
           )}
 
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">{t('auth.email')}</label>
             <input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t('auth.emailPlaceholder')}
               required
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">{t('auth.password')}</label>
             <div className="password-wrapper">
               <input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min. 8 characters"
+                placeholder={t('auth.passwordPlaceholder')}
                 minLength={8}
                 required
               />
@@ -113,13 +115,13 @@ export default function AuthPage() {
                 className="password-toggle"
                 onClick={() => setShowPassword((v) => !v)}
                 tabIndex={-1}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
             {mode === 'register' && (
-              <small className="password-hint">Must be at least 8 characters</small>
+              <small className="password-hint">{t('auth.passwordHint')}</small>
             )}
           </div>
 
@@ -129,10 +131,10 @@ export default function AuthPage() {
             {loading ? (
               <>
                 <Loader2 size={18} className="spin" />
-                <span>{mode === 'login' ? 'Signing in…' : 'Creating account…'}</span>
+                <span>{mode === 'login' ? t('auth.signingIn') : t('auth.creatingAccount')}</span>
               </>
             ) : (
-              <span>{mode === 'login' ? 'Sign In' : 'Create Account'}</span>
+              <span>{mode === 'login' ? t('auth.signIn') : t('auth.createAccount')}</span>
             )}
           </button>
         </form>

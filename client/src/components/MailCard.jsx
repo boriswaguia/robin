@@ -1,19 +1,30 @@
 import { getCategoryColor, getCategoryIcon, formatDate } from '../utils';
 import { Loader2, AlertCircle, ShieldX, Mic, AlertTriangle, CheckCircle2, Archive, Reply, CreditCard, CalendarClock, Trash2, Star } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
-const ACTION_LABELS = {
-  archive: { label: 'Archived', icon: Archive },
-  reply: { label: 'To Reply', icon: Reply },
-  pay_bill: { label: 'To Pay', icon: CreditCard },
-  schedule_followup: { label: 'Follow Up', icon: CalendarClock },
-  discard: { label: 'Discarded', icon: Trash2 },
-  mark_important: { label: 'Important', icon: Star },
+const ACTION_KEYS = {
+  archive: 'mailCard.archived',
+  reply: 'mailCard.toReply',
+  pay_bill: 'mailCard.toPay',
+  schedule_followup: 'mailCard.followUp',
+  discard: 'mailCard.discarded',
+  mark_important: 'mailCard.important',
+};
+
+const ACTION_ICONS = {
+  archive: Archive,
+  reply: Reply,
+  pay_bill: CreditCard,
+  schedule_followup: CalendarClock,
+  discard: Trash2,
+  mark_important: Star,
 };
 
 // Categorization actions keep item active — only archive/discard resolve
 const RESOLVING_ACTIONS = ['archive', 'discard'];
 
 export default function MailCard({ item, sharedBy }) {
+  const { t } = useTranslation();
   const isProcessing = item.status === 'processing';
   const isError = item.status === 'error';
   const isRejected = item.status === 'rejected';
@@ -23,8 +34,8 @@ export default function MailCard({ item, sharedBy }) {
       <div className="mail-card processing">
         <div className="mail-card-body">
           <Loader2 size={20} className="spin" />
-          <h4>Processing mail…</h4>
-          <p>Reading and categorizing your mail</p>
+          <h4>{t('mailCard.processing')}</h4>
+          <p>{t('mailCard.processingDesc')}</p>
         </div>
         <div className="mail-card-footer">
           <span className="date">{formatDate(item.createdAt)}</span>
@@ -38,8 +49,8 @@ export default function MailCard({ item, sharedBy }) {
       <div className="mail-card error rejected">
         <div className="mail-card-body">
           <ShieldX size={20} />
-          <h4>Document rejected</h4>
-          <p>{item.extractedText?.replace('Document rejected: ', '') || 'This does not appear to be valid postal mail.'}</p>
+          <h4>{t('mailCard.rejected')}</h4>
+          <p>{item.extractedText?.replace('Document rejected: ', '') || t('mailCard.rejectedFallback')}</p>
         </div>
         <div className="mail-card-footer">
           <span className="date">{formatDate(item.createdAt)}</span>
@@ -53,8 +64,8 @@ export default function MailCard({ item, sharedBy }) {
       <div className="mail-card error">
         <div className="mail-card-body">
           <AlertCircle size={20} />
-          <h4>Processing failed</h4>
-          <p>Could not read this mail. Tap to view details.</p>
+          <h4>{t('mailCard.errorTitle')}</h4>
+          <p>{t('mailCard.errorDesc')}</p>
         </div>
         <div className="mail-card-footer">
           <span className="date">{formatDate(item.createdAt)}</span>
@@ -65,11 +76,11 @@ export default function MailCard({ item, sharedBy }) {
 
   const suggested = item.suggestedActions || [];
   const primaryAction = suggested[0];
-  const primaryLabel = primaryAction ? ACTION_LABELS[primaryAction] : null;
+  const primaryKey = primaryAction ? ACTION_KEYS[primaryAction] : null;
   const isCompleted = item.status === 'action_taken' || item.status === 'discarded';
   const hasLabel = item.actionTaken && !RESOLVING_ACTIONS.includes(item.actionTaken);
   const needsAction = suggested.length > 0 && !isCompleted;
-  const PrimaryIcon = primaryLabel?.icon;
+  const PrimaryIcon = primaryAction ? ACTION_ICONS[primaryAction] : null;
 
   return (
     <div className={`mail-card ${item.status === 'new' ? 'new' : ''} ${needsAction ? (item.urgency === 'high' ? 'needs-action-urgent' : 'needs-action') : ''}`}>
@@ -77,27 +88,27 @@ export default function MailCard({ item, sharedBy }) {
         <span className={`category-badge ${getCategoryColor(item.category)}`}>
           {getCategoryIcon(item.category)} {item.category}
         </span>
-        {item.source === 'gmail' && <span className="source-badge gmail">Gmail</span>}
-        {item.source === 'voice' && <span className="source-badge voice"><Mic size={11} /> Voice</span>}
-        {sharedBy && <span className="source-badge shared">via {sharedBy.name}</span>}
-        {item.urgency === 'high' && <span className="urgency-badge">Urgent</span>}
-        {hasLabel && <span className="status-badge label-badge">{ACTION_LABELS[item.actionTaken]?.label || item.actionTaken?.replace('_', ' ')}</span>}
-        {isCompleted && <span className="status-badge">{ACTION_LABELS[item.actionTaken]?.label || item.actionTaken?.replace('_', ' ')}</span>}
+        {item.source === 'gmail' && <span className="source-badge gmail">{t('mailCard.gmail')}</span>}
+        {item.source === 'voice' && <span className="source-badge voice"><Mic size={11} /> {t('mailCard.voice')}</span>}
+        {sharedBy && <span className="source-badge shared">{t('mailCard.sharedVia', { name: sharedBy.name })}</span>}
+        {item.urgency === 'high' && <span className="urgency-badge">{t('mailCard.urgent')}</span>}
+        {hasLabel && <span className="status-badge label-badge">{t(ACTION_KEYS[item.actionTaken]) || item.actionTaken?.replace('_', ' ')}</span>}
+        {isCompleted && <span className="status-badge">{t(ACTION_KEYS[item.actionTaken]) || item.actionTaken?.replace('_', ' ')}</span>}
         {item.installmentLabel && <span className="status-badge installment-badge">{item.installmentLabel}</span>}
       </div>
       <div className="mail-card-body">
-        <h4>{item.sender && item.sender !== 'Unknown' ? item.sender : (item.summary ? 'Mail' : 'Unknown Sender')}</h4>
+        <h4>{item.sender && item.sender !== 'Unknown' ? item.sender : (item.summary ? t('dashboard.mail') : t('mailCard.unknownSender'))}</h4>
         <p>{item.summary}</p>
       </div>
-      {needsAction && primaryLabel && (
+      {needsAction && primaryKey && (
         <div className="mail-card-action-hint">
           <AlertTriangle size={13} />
-          <span>{hasLabel ? ACTION_LABELS[item.actionTaken]?.label : primaryLabel.label}</span>
+          <span>{hasLabel ? t(ACTION_KEYS[item.actionTaken]) : t(primaryKey)}</span>
           {item.dueDate && (() => {
             const diffDays = Math.ceil((new Date(item.dueDate) - new Date()) / 86400000);
-            if (diffDays < 0) return <span className="hint-due overdue">{Math.abs(diffDays)}d overdue</span>;
-            if (diffDays === 0) return <span className="hint-due overdue">Today</span>;
-            if (diffDays <= 7) return <span className="hint-due">{diffDays}d left</span>;
+            if (diffDays < 0) return <span className="hint-due overdue">{t('mailCard.overdueDays', { count: Math.abs(diffDays) })}</span>;
+            if (diffDays === 0) return <span className="hint-due overdue">{t('mailCard.today')}</span>;
+            if (diffDays <= 7) return <span className="hint-due">{t('mailCard.daysLeft', { count: diffDays })}</span>;
             return null;
           })()}
         </div>
@@ -105,7 +116,7 @@ export default function MailCard({ item, sharedBy }) {
       {isCompleted && (
         <div className="mail-card-action-hint done">
           <CheckCircle2 size={13} />
-          <span>{ACTION_LABELS[item.actionTaken]?.label || item.actionTaken?.replace('_', ' ')}</span>
+          <span>{t(ACTION_KEYS[item.actionTaken]) || item.actionTaken?.replace('_', ' ')}</span>
         </div>
       )}
       <div className="mail-card-footer">

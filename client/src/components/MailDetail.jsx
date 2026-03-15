@@ -6,19 +6,20 @@ import { getCategoryColor, getCategoryIcon, formatDate } from '../utils';
 import { downloadCalendarEvent } from '../services/calendar';
 import { extractSepaFields } from '../services/sepa';
 import SepaPayModal from './SepaPayModal';
+import { useTranslation } from 'react-i18next';
 
 // Categorization actions — label what needs to be done (item stays active)
 const CATEGORIZE_ACTIONS = {
-  reply: { label: 'To Reply', icon: Reply, color: 'green', desc: 'Needs a reply' },
-  pay_bill: { label: 'To Pay', icon: CreditCard, color: 'orange', desc: 'Needs payment' },
-  schedule_followup: { label: 'Follow Up', icon: CalendarClock, color: 'purple', desc: 'Set a follow-up date' },
-  mark_important: { label: 'Important', icon: Star, color: 'yellow', desc: 'Flag for attention' },
+  reply: { labelKey: 'mailDetail.toReply', icon: Reply, color: 'green', descKey: 'mailDetail.needsReply' },
+  pay_bill: { labelKey: 'mailDetail.toPay', icon: CreditCard, color: 'orange', descKey: 'mailDetail.needsPayment' },
+  schedule_followup: { labelKey: 'mailDetail.followUp', icon: CalendarClock, color: 'purple', descKey: 'mailDetail.setFollowUp' },
+  mark_important: { labelKey: 'mailDetail.important', icon: Star, color: 'yellow', descKey: 'mailDetail.flagAttention' },
 };
 
 // Completion actions — resolve the item
 const COMPLETE_ACTIONS = {
-  archive: { label: 'Archive', icon: Archive, color: 'blue', desc: 'File away for records' },
-  discard: { label: 'Discard', icon: Trash2, color: 'red', desc: 'Not needed' },
+  archive: { labelKey: 'mailDetail.archive', icon: Archive, color: 'blue', descKey: 'mailDetail.fileAway' },
+  discard: { labelKey: 'mailDetail.discard', icon: Trash2, color: 'red', descKey: 'mailDetail.notNeeded' },
 };
 
 // Combined for lookups
@@ -27,20 +28,21 @@ const ACTION_CONFIG = { ...CATEGORIZE_ACTIONS, ...COMPLETE_ACTIONS };
 const CATEGORIES = ['bill', 'personal', 'government', 'legal', 'medical', 'insurance', 'financial', 'advertisement', 'subscription', 'reminder', 'tax', 'other'];
 const URGENCIES = ['low', 'medium', 'high'];
 
-function getDueDaysText(dueDate) {
+function getDueDaysText(dueDate, t) {
   if (!dueDate) return null;
   const now = new Date();
   const due = new Date(dueDate);
   const diffMs = due - now;
   const diffDays = Math.ceil(diffMs / 86400000);
-  if (diffDays < 0) return { text: `${Math.abs(diffDays)}d overdue`, overdue: true };
-  if (diffDays === 0) return { text: 'Due today', overdue: true };
-  if (diffDays === 1) return { text: 'Due tomorrow', overdue: false };
-  if (diffDays <= 7) return { text: `Due in ${diffDays} days`, overdue: false };
-  return { text: `Due ${due.toLocaleDateString()}`, overdue: false };
+  if (diffDays < 0) return { text: t('mailDetail.daysOverdue', { count: Math.abs(diffDays) }), overdue: true };
+  if (diffDays === 0) return { text: t('mailDetail.dueToday'), overdue: true };
+  if (diffDays === 1) return { text: t('mailDetail.dueTomorrow'), overdue: false };
+  if (diffDays <= 7) return { text: t('mailDetail.dueInDays', { count: diffDays }), overdue: false };
+  return { text: t('mailDetail.dueOn', { date: due.toLocaleDateString() }), overdue: false };
 }
 
 export default function MailDetail() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const [item, setItem] = useState(null);
@@ -95,7 +97,7 @@ export default function MailDetail() {
   }, [id, isProcessing]);
 
   async function handleDelete() {
-    if (!confirm('Delete this mail item?')) return;
+    if (!confirm(t('mailDetail.confirmDelete'))) return;
     await deleteMailItem(id);
     // Go back to wherever the user came from, fallback to Dashboard
     if (window.history.length > 2) {
@@ -202,7 +204,7 @@ export default function MailDetail() {
     }
   }
 
-  if (loading) return <div className="loading">Loading…</div>;
+  if (loading) return <div className="loading">{t('common.loading')}</div>;
   if (!item) return null;
 
   const sepaFields = extractSepaFields(item.actionableInfo || []);
@@ -221,11 +223,11 @@ export default function MailDetail() {
     <div className="mail-detail">
       <div className="detail-header">
         <button className="back-btn" onClick={() => navigate('/')}>
-          <ArrowLeft size={20} /> Back
+          <ArrowLeft size={20} /> {t('common.back')}
         </button>
         <div className="detail-header-actions">
           {item.readOnly ? (
-            <span className="shared-by-badge"><Users size={14} /> Shared by {item.sharedBy?.name}</span>
+            <span className="shared-by-badge"><Users size={14} /> {t('mailDetail.sharedBy', { name: item.sharedBy?.name })}</span>
           ) : (
             <>
               {!editing && item.source !== 'gmail' && item.source !== 'voice' && (
@@ -243,13 +245,13 @@ export default function MailDetail() {
                     }
                   }}
                   disabled={rescanning || item.status === 'processing'}
-                  title="Rescan with AI"
+                  title={t('mailDetail.rescan')}
                 >
                   <RefreshCw size={18} />
                 </button>
               )}
               {!editing && (
-                <button className="edit-btn" onClick={startEditing} title="Edit fields">
+                <button className="edit-btn" onClick={startEditing} title={t('mailDetail.editFields')}>
                   <Pencil size={18} />
                 </button>
               )}
@@ -257,12 +259,12 @@ export default function MailDetail() {
                 <button
                   className={`edit-btn ${showSharePanel ? 'active' : ''}`}
                   onClick={() => setShowSharePanel((v) => !v)}
-                  title="Share this item"
+                  title={t('mailDetail.shareItem')}
                 >
                   <Share2 size={18} />
                 </button>
               )}
-              <button className="reminder-btn" onClick={toggleReminder} title={item.reminderAt ? 'Clear reminder' : 'Set reminder'}>
+              <button className="reminder-btn" onClick={toggleReminder} title={item.reminderAt ? t('mailDetail.clearReminder') : t('mailDetail.setReminder')}>
                 {item.reminderAt ? <BellOff size={18} /> : <Bell size={18} />}
               </button>
               <button className="delete-btn" onClick={handleDelete}>
@@ -276,7 +278,7 @@ export default function MailDetail() {
       {/* Share panel */}
       {showSharePanel && outgoingConns.length > 0 && (
         <div className="share-panel">
-          <div className="share-panel-title"><Share2 size={14} /> Share with</div>
+          <div className="share-panel-title"><Share2 size={14} /> {t('mailDetail.shareWith')}</div>
           {outgoingConns.map((conn) => {
             const isShared = sharedWith.includes(conn.toUser.id);
             return (
@@ -299,7 +301,7 @@ export default function MailDetail() {
       {item.reminderAt && (
         <div className="reminder-banner">
           <Bell size={14} />
-          <span>Reminder set for {new Date(item.reminderAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+          <span>{t('mailDetail.reminderSet', { date: new Date(item.reminderAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) })}</span>
           <button onClick={toggleReminder}><X size={14} /></button>
         </div>
       )}
@@ -320,10 +322,10 @@ export default function MailDetail() {
               <span className={`category-badge ${getCategoryColor(item.category)}`}>
                 {getCategoryIcon(item.category)} {item.category}
               </span>
-              {item.urgency === 'high' && <span className="urgency-badge">Urgent</span>}
-              {item.urgency === 'medium' && <span className="urgency-badge medium">Medium</span>}
-              {item.source === 'gmail' && <span className="source-badge gmail">Gmail</span>}
-              {item.source === 'voice' && <span className="source-badge voice"><Mic size={11} /> Voice</span>}
+              {item.urgency === 'high' && <span className="urgency-badge">{t('mailCard.urgent')}</span>}
+              {item.urgency === 'medium' && <span className="urgency-badge medium">{t('mailDetail.medium')}</span>}
+              {item.source === 'gmail' && <span className="source-badge gmail">{t('mailCard.gmail')}</span>}
+              {item.source === 'voice' && <span className="source-badge voice"><Mic size={11} /> {t('mailCard.voice')}</span>}
               {item.installmentLabel && <span className="source-badge installment">{item.installmentLabel}</span>}
             </>
           )}
@@ -334,7 +336,7 @@ export default function MailDetail() {
           const suggested = item.suggestedActions || [];
           const primaryAction = suggested[0];
           const primaryConfig = primaryAction ? ACTION_CONFIG[primaryAction] : null;
-          const dueInfo = getDueDaysText(item.dueDate);
+          const dueInfo = getDueDaysText(item.dueDate, t);
           const isCompleted = item.status === 'action_taken' || item.status === 'discarded' || item.status === 'done';
           const hasLabel = item.actionTaken && CATEGORIZE_ACTIONS[item.actionTaken];
           const needsAction = suggested.length > 0 && !isCompleted;
@@ -347,7 +349,7 @@ export default function MailDetail() {
                   <>
                     <CheckCircle2 size={20} className="banner-icon done" />
                     <div className="banner-text">
-                      <span className="banner-title">Done — {ACTION_CONFIG[item.actionTaken]?.label || item.actionTaken}</span>
+                      <span className="banner-title">{t('mailDetail.done')} — {ACTION_CONFIG[item.actionTaken] ? t(ACTION_CONFIG[item.actionTaken].labelKey) : item.actionTaken}</span>
                       {item.actionNote && <span className="banner-subtitle">{item.actionNote}</span>}
                     </div>
                     {!item.readOnly && (
@@ -361,10 +363,10 @@ export default function MailDetail() {
                             alert(err.message);
                           }
                         }}
-                        title="Undo — reopen this item"
+                        title={t('mailDetail.undoReopen')}
                       >
                         <Undo2 size={16} />
-                        <span>Undo</span>
+                        <span>{t('mailDetail.undo')}</span>
                       </button>
                     )}
                   </>
@@ -373,10 +375,10 @@ export default function MailDetail() {
                     <AlertTriangle size={20} className="banner-icon" />
                     <div className="banner-text">
                       <span className="banner-title">
-                        {hasLabel ? `Labeled: ${CATEGORIZE_ACTIONS[item.actionTaken].label}` : 'Action Required'}
+                        {hasLabel ? `${t('mailDetail.labeled')}: ${t(CATEGORIZE_ACTIONS[item.actionTaken].labelKey)}` : t('mailDetail.actionRequired')}
                       </span>
                       <span className="banner-subtitle">
-                        {primaryConfig && !hasLabel && `Recommended: ${primaryConfig.label}`}
+                        {primaryConfig && !hasLabel && `${t('mailDetail.recommended')}: ${t(primaryConfig.labelKey)}`}
                         {hasLabel && item.actionNote && item.actionNote}
                         {!hasLabel && dueInfo && ` · ${dueInfo.text}`}
                         {!hasLabel && item.amountDue && ` · ${item.amountDue}`}
@@ -389,8 +391,8 @@ export default function MailDetail() {
                   <>
                     <CheckCircle2 size={20} className="banner-icon info" />
                     <div className="banner-text">
-                      <span className="banner-title">No Action Needed</span>
-                      <span className="banner-subtitle">This item is for your information only</span>
+                      <span className="banner-title">{t('mailDetail.noActionNeeded')}</span>
+                      <span className="banner-subtitle">{t('mailDetail.infoOnly')}</span>
                     </div>
                   </>
                 )}
@@ -405,7 +407,7 @@ export default function MailDetail() {
                     disabled={acting !== null}
                   >
                     <CheckCircle2 size={18} />
-                    <span>Done</span>
+                    <span>{t('mailDetail.done')}</span>
                   </button>
 
                   {/* Categorization actions */}
@@ -419,10 +421,10 @@ export default function MailDetail() {
                           className={`action-secondary ${config.color} ${suggested.includes(key) ? 'suggested' : ''} ${isActive ? 'active-label' : ''}`}
                           onClick={() => handleAction(key)}
                           disabled={acting !== null}
-                          title={config.desc}
+                          title={t(config.descKey)}
                         >
                           <Icon size={16} />
-                          <span>{config.label}</span>
+                          <span>{t(config.labelKey)}</span>
                         </button>
                       );
                     })}
@@ -430,10 +432,10 @@ export default function MailDetail() {
                       className="action-secondary red"
                       onClick={() => handleAction('discard')}
                       disabled={acting !== null}
-                      title="Not needed"
+                      title={t('mailDetail.notNeeded')}
                     >
                       <Trash2 size={16} />
-                      <span>Discard</span>
+                      <span>{t('mailDetail.discard')}</span>
                     </button>
                   </div>
                 </div>
@@ -442,14 +444,14 @@ export default function MailDetail() {
               {showActionNote && (
                 <div className="action-note-input">
                   <textarea
-                    placeholder={selectedAction === 'reply' ? 'Draft your reply notes…' : 'When should you follow up?'}
+                    placeholder={selectedAction === 'reply' ? t('action.replyPlaceholder') : t('action.followUpPlaceholder')}
                     value={actionNote}
                     onChange={(e) => setActionNote(e.target.value)}
                     rows={2}
                   />
                   <div className="action-note-btns">
-                    <button className="btn btn-secondary btn-sm" onClick={() => { setShowActionNote(false); setSelectedAction(null); setActionNote(''); }}>Cancel</button>
-                    <button className="btn btn-primary btn-sm" onClick={() => executeAction(selectedAction, actionNote)} disabled={acting !== null}>Confirm</button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => { setShowActionNote(false); setSelectedAction(null); setActionNote(''); }}>{t('common.cancel')}</button>
+                    <button className="btn btn-primary btn-sm" onClick={() => executeAction(selectedAction, actionNote)} disabled={acting !== null}>{t('common.confirm')}</button>
                   </div>
                 </div>
               )}
@@ -460,41 +462,41 @@ export default function MailDetail() {
         {editing ? (
           <div className="edit-fields">
             <div className="edit-field">
-              <label>Sender</label>
+              <label>{t('mailDetail.sender')}</label>
               <input value={editFields.sender} onChange={(e) => setEditFields({ ...editFields, sender: e.target.value })} />
             </div>
             <div className="edit-field">
-              <label>Receiver</label>
+              <label>{t('mailDetail.receiver')}</label>
               <input value={editFields.receiver} onChange={(e) => setEditFields({ ...editFields, receiver: e.target.value })} />
             </div>
             <div className="edit-field">
-              <label>Summary</label>
+              <label>{t('mailDetail.summary')}</label>
               <textarea value={editFields.summary} onChange={(e) => setEditFields({ ...editFields, summary: e.target.value })} rows={2} />
             </div>
             <div className="edit-row">
               <div className="edit-field">
-                <label>Amount Due</label>
+                <label>{t('mailDetail.amountDue')}</label>
                 <input value={editFields.amountDue} onChange={(e) => setEditFields({ ...editFields, amountDue: e.target.value })} placeholder="e.g. €45.00" />
               </div>
               <div className="edit-field">
-                <label>Due Date</label>
+                <label>{t('mailDetail.dueDateLabel')}</label>
                 <input type="date" value={editFields.dueDate?.split('T')[0] || ''} onChange={(e) => setEditFields({ ...editFields, dueDate: e.target.value || '' })} />
               </div>
             </div>
             <div className="edit-actions">
               <button className="btn btn-primary btn-sm" onClick={saveEdits} disabled={saving}>
-                <Save size={16} /> {saving ? 'Saving…' : 'Save Changes'}
+                <Save size={16} /> {saving ? t('common.saving') : t('mailDetail.saveChanges')}
               </button>
               <button className="btn btn-secondary btn-sm" onClick={() => setEditing(false)} disabled={saving}>
-                <X size={16} /> Cancel
+                <X size={16} /> {t('common.cancel')}
               </button>
             </div>
           </div>
         ) : (
           <>
-            <h2>{item.sender && item.sender !== 'Unknown' ? item.sender : 'Mail'}</h2>
+            <h2>{item.sender && item.sender !== 'Unknown' ? item.sender : t('dashboard.mail')}</h2>
             {item.receiver && item.receiver !== 'Unknown' && (
-              <p className="receiver-line">To: {item.receiver}</p>
+              <p className="receiver-line">{t('mailDetail.to')}: {item.receiver}</p>
             )}
             <p className="summary">{item.summary}</p>
           </>
@@ -502,7 +504,7 @@ export default function MailDetail() {
 
         {!editing && item.keyDetails && item.keyDetails.length > 0 && (
           <div className="key-details">
-            <h4>Key Details</h4>
+            <h4>{t('mailDetail.keyDetails')}</h4>
             <ul>
               {item.keyDetails.map((d, i) => (
                 <li key={i}><Linkified text={d} /></li>
@@ -515,23 +517,23 @@ export default function MailDetail() {
           <div className="detail-meta">
             {item.amountDue && (
               <div className="meta-item">
-                <span className="meta-label">Amount Due</span>
+                <span className="meta-label">{t('mailDetail.amountDue')}</span>
                 <span className="meta-value amount">{item.amountDue}</span>
               </div>
             )}
             {item.dueDate && (
               <div className="meta-item">
-                <span className="meta-label">Due Date</span>
+                <span className="meta-label">{t('mailDetail.dueDateLabel')}</span>
                 <span className="meta-value">{new Date(item.dueDate).toLocaleDateString()}</span>
               </div>
             )}
             <div className="meta-item">
-              <span className="meta-label">Scanned</span>
+                <span className="meta-label">{t('mailDetail.scanned')}</span>
               <span className="meta-value">{formatDate(item.createdAt)}</span>
             </div>
             {isMultiPage && (
               <div className="meta-item">
-                <span className="meta-label">Pages</span>
+                <span className="meta-label">{t('mailDetail.pages')}</span>
                 <span className="meta-value">{imageUrls.length}</span>
               </div>
             )}
@@ -544,20 +546,20 @@ export default function MailDetail() {
             onClick={() => downloadCalendarEvent(item)}
           >
             <CalendarPlus size={18} />
-            <span>Add to Calendar</span>
+            <span>{t('mailDetail.addToCalendar')}</span>
           </button>
         )}
 
         {!editing && hasSepa && sepaFields.ibans.map((entry, idx) => (
           <button key={idx} className="btn btn-sepa" onClick={() => setShowSepaIdx(idx)}>
             <Landmark size={18} />
-            <span>{sepaFields.ibans.length > 1 ? `Pay ${entry.label || entry.iban}` : 'Pay via SEPA'}</span>
+            <span>{sepaFields.ibans.length > 1 ? t('mailDetail.payLabel', { label: entry.label || entry.iban }) : t('mailDetail.payViaSEPA')}</span>
           </button>
         ))}
 
         {!editing && item.actionableInfo && item.actionableInfo.length > 0 && (
           <div className="actionable-info">
-            <h4><ClipboardList size={16} /> What You Need</h4>
+            <h4><ClipboardList size={16} /> {t('mailDetail.whatYouNeed')}</h4>
             <div className="actionable-grid">
               {item.actionableInfo.map((info, i) => (
                 <ActionableRow
@@ -577,14 +579,14 @@ export default function MailDetail() {
         {/* Installment breakdown (parent items) */}
         {!editing && hasInstallments && (
           <div className="installment-section">
-            <h4><CreditCard size={16} /> Payment Schedule</h4>
+            <h4><CreditCard size={16} /> {t('mailDetail.paymentSchedule')}</h4>
             <div className="installment-list">
               {item.installments.map((inst) => {
                 const isPaid = inst.status === 'action_taken' || inst.status === 'discarded';
                 const isOverdue = inst.dueDate && new Date(inst.dueDate) < new Date() && !isPaid;
                 return (
                   <Link key={inst.id} to={`/mail/${inst.id}`} className={`installment-row ${isPaid ? 'paid' : ''} ${isOverdue ? 'overdue' : ''}`}>
-                    <span className="inst-label">{inst.installmentLabel || 'Installment'}</span>
+                    <span className="inst-label">{inst.installmentLabel || t('mailDetail.installment')}</span>
                     <span className="inst-amount">{inst.amountDue || '—'}</span>
                     <span className="inst-due">{inst.dueDate ? formatDate(inst.dueDate) : '—'}</span>
                     {isPaid ? <CheckCircle2 size={14} className="inst-paid-icon" /> : isOverdue ? <AlertTriangle size={14} className="inst-overdue-icon" /> : <Clock size={14} className="inst-pending-icon" />}
@@ -600,7 +602,7 @@ export default function MailDetail() {
           <div className="installment-parent-link">
             <Link to={`/mail/${item.parent.id}`} className="btn btn-outline">
               <Link2 size={16} />
-              View original document{item.parent.installmentLabel ? ` — ${item.parent.installmentLabel}` : ''}
+              {t('mailDetail.viewOriginal')}{item.parent.installmentLabel ? ` — ${item.parent.installmentLabel}` : ''}
             </Link>
           </div>
         )}
@@ -608,11 +610,11 @@ export default function MailDetail() {
         <div className="detail-toggles">
           {hasImages && (
             <button className="toggle-btn" onClick={() => { setShowImage(!showImage); setCurrentPage(0); }}>
-              <Image size={16} /> {showImage ? 'Hide' : 'Show'} Original{isMultiPage ? ` (${imageUrls.length} pages)` : ' Image'}
+              <Image size={16} /> {showImage ? t('common.hide') : t('common.show')} {isMultiPage ? t('mailDetail.originalPages', { count: imageUrls.length }) : t('mailDetail.originalImage')}
             </button>
           )}
           <button className="toggle-btn" onClick={() => setShowText(!showText)}>
-            <FileText size={16} /> {showText ? 'Hide' : 'Show'} Extracted Text
+            <FileText size={16} /> {showText ? t('common.hide') : t('common.show')} {t('mailDetail.extractedText')}
           </button>
         </div>
 
@@ -623,7 +625,7 @@ export default function MailDetail() {
                 <button disabled={currentPage === 0} onClick={() => setCurrentPage((p) => p - 1)}>
                   <ChevronLeft size={18} />
                 </button>
-                <span>Page {currentPage + 1} of {imageUrls.length}</span>
+                <span>{t('mailDetail.pageOf', { current: currentPage + 1, total: imageUrls.length })}</span>
                 <button disabled={currentPage === imageUrls.length - 1} onClick={() => setCurrentPage((p) => p + 1)}>
                   <ChevronRight size={18} />
                 </button>
@@ -644,13 +646,13 @@ export default function MailDetail() {
 
       {item.relatedMail && item.relatedMail.length > 0 && (
         <div className="related-mail">
-          <h3><Link2 size={18} /> Related Mail ({item.relatedMail.length + 1} in thread)</h3>
+          <h3><Link2 size={18} /> {t('mailDetail.relatedMail', { count: item.relatedMail.length + 1 })}</h3>
           <div className="related-timeline">
             <div className="timeline-item current">
               <div className="timeline-dot" />
               <div className="timeline-content">
                 <span className="timeline-date">{formatDate(item.createdAt)}</span>
-                <span className="timeline-summary">This mail — {item.summary}</span>
+                <span className="timeline-summary">{t('mailDetail.thisMail')} — {item.summary}</span>
               </div>
             </div>
             {item.relatedMail.map((rel) => (

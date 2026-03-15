@@ -1,18 +1,20 @@
 import { useState } from 'react';
 import { Archive, Reply, CreditCard, CalendarClock, Trash2, Star, Check } from 'lucide-react';
 import { performAction } from '../services/api';
+import { useTranslation } from 'react-i18next';
 
 const ACTION_CONFIG = {
-  archive: { label: 'Archive', icon: Archive, color: 'blue' },
-  reply: { label: 'Reply', icon: Reply, color: 'green' },
-  pay_bill: { label: 'Pay Bill', icon: CreditCard, color: 'orange' },
-  schedule_followup: { label: 'Follow Up', icon: CalendarClock, color: 'purple' },
-  discard: { label: 'Discard', icon: Trash2, color: 'red' },
-  mark_important: { label: 'Important', icon: Star, color: 'yellow' },
+  archive: { labelKey: 'action.archive', icon: Archive, color: 'blue' },
+  reply: { labelKey: 'action.reply', icon: Reply, color: 'green' },
+  pay_bill: { labelKey: 'action.payBill', icon: CreditCard, color: 'orange' },
+  schedule_followup: { labelKey: 'action.followUp', icon: CalendarClock, color: 'purple' },
+  discard: { labelKey: 'action.discard', icon: Trash2, color: 'red' },
+  mark_important: { labelKey: 'action.important', icon: Star, color: 'yellow' },
 };
 
 export default function ActionPanel({ item, onUpdate, hidden = false }) {
   if (hidden) return null;
+  const { t } = useTranslation();
   const [acting, setActing] = useState(null);
   const [note, setNote] = useState('');
   const [showNote, setShowNote] = useState(false);
@@ -47,7 +49,7 @@ export default function ActionPanel({ item, onUpdate, hidden = false }) {
       <div className="action-panel done">
         <Check size={20} />
         <span>
-          Action taken: <strong>{ACTION_CONFIG[item.actionTaken]?.label || item.actionTaken}</strong>
+          {t('action.actionTaken')}: <strong>{ACTION_CONFIG[item.actionTaken] ? t(ACTION_CONFIG[item.actionTaken].labelKey) : item.actionTaken}</strong>
         </span>
         {item.actionNote && <p className="action-note">{item.actionNote}</p>}
       </div>
@@ -59,9 +61,9 @@ export default function ActionPanel({ item, onUpdate, hidden = false }) {
 
   return (
     <div className="action-panel">
-      <h3>What would you like to do?</h3>
+      <h3>{t('action.whatToDo')}</h3>
       {suggested.length > 0 && (
-        <p className="suggestion-hint">Suggested actions are highlighted</p>
+        <p className="suggestion-hint">{t('action.suggestedHint')}</p>
       )}
 
       <div className="action-grid">
@@ -76,7 +78,7 @@ export default function ActionPanel({ item, onUpdate, hidden = false }) {
               disabled={acting !== null}
             >
               <Icon size={22} />
-              <span>{config.label}</span>
+              <span>{t(config.labelKey)}</span>
               {isSuggested && <span className="suggested-dot" />}
             </button>
           );
@@ -88,8 +90,8 @@ export default function ActionPanel({ item, onUpdate, hidden = false }) {
           <textarea
             placeholder={
               selectedAction === 'reply'
-                ? 'Draft your reply notes…'
-                : 'When should you follow up?'
+                ? t('action.replyPlaceholder')
+                : t('action.followUpPlaceholder')
             }
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -100,14 +102,14 @@ export default function ActionPanel({ item, onUpdate, hidden = false }) {
               className="btn btn-secondary"
               onClick={() => { setShowNote(false); setSelectedAction(null); setNote(''); }}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               className="btn btn-primary"
               onClick={() => executeAction(selectedAction, note)}
               disabled={acting !== null}
             >
-              Confirm
+              {t('common.confirm')}
             </button>
           </div>
         </div>
