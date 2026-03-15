@@ -103,15 +103,22 @@ app.listen(PORT, async () => {
 
   // Auto-promote ADMIN_EMAIL to admin role (if set and user exists)
   const adminEmail = process.env.ADMIN_EMAIL;
+  console.log(`ADMIN_EMAIL env var: ${adminEmail ? `"${adminEmail}"` : '(not set)'}`);
   if (adminEmail) {
     try {
       const result = await prisma.user.updateMany({
         where: { email: adminEmail, role: { not: 'admin' } },
         data: { role: 'admin' },
       });
-      if (result.count > 0) console.log(`Promoted ${adminEmail} to admin`);
+      if (result.count > 0) {
+        console.log(`Promoted ${adminEmail} to admin`);
+      } else {
+        console.log(`ADMIN_EMAIL: ${adminEmail} already admin or user not found`);
+      }
     } catch (err) {
       console.error('ADMIN_EMAIL promotion failed:', err.message);
     }
+  } else {
+    console.log('No ADMIN_EMAIL set — skipping admin promotion');
   }
 });
