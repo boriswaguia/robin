@@ -3621,7 +3621,13 @@ ul { list-style: none; }
   border-radius: var(--radius);
   text-decoration: none;
   color: var(--text);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s, opacity 0.3s, transform 0.3s;
+}
+
+.agenda-item-done {
+  opacity: 0;
+  transform: translateX(40px);
+  pointer-events: none;
 }
 
 .agenda-item:hover {
@@ -3641,15 +3647,40 @@ ul { list-style: none; }
   border-left: 3px solid var(--primary);
 }
 
-.agenda-cat {
+/* Mark-done checkbox button */
+.agenda-check {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  font-size: 1.15rem;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text-secondary);
   flex-shrink: 0;
+  transition: color 0.15s, transform 0.15s;
+}
+
+.agenda-check:hover {
+  color: var(--success, #22c55e);
+  transform: scale(1.15);
+}
+
+.agenda-check.checked {
+  color: var(--success, #22c55e);
+}
+
+.agenda-check:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Category dot inline with sender name */
+.agenda-cat-dot {
+  display: inline-flex;
+  align-items: center;
+  font-size: 1rem;
+  margin-right: 4px;
 }
 
 .agenda-item-body {

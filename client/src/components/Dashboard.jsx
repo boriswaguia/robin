@@ -7,7 +7,7 @@ import MailCard from './MailCard';
 export default function Dashboard() {
   const [mail, setMail] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState(null); // null = auto-pick on first load
+  const [filter, setFilter] = useState('all');
   const [showSearch, setShowSearch] = useState(false);
   const [searchParams, setSearchParams] = useState({ q: '', sender: '', receiver: '', dateFrom: '', dateTo: '' });
   const [isSearching, setIsSearching] = useState(false);
@@ -79,12 +79,8 @@ export default function Dashboard() {
   // Items that genuinely need user attention (new + has suggested actions, excluding errors)
   const actionNeeded = mail.filter((m) => m.status === 'new' && m.suggestedActions?.length > 0);
   const newCount = actionNeeded.length;
-  const urgentCount = actionNeeded.filter((m) => m.urgency === 'high').length;
 
-  // Auto-pick default filter on first load
-  const activeFilter = filter ?? (newCount > 0 ? 'action_needed' : 'all');
-
-  // Priority sort: processing → urgent action-needed → action-needed → new/info → done → error/rejected
+  // Priority sort: processing → needs-action (urgent first) → new/info → done → error/rejected
   function prioritySort(a, b) {
     function score(m) {
       if (m.status === 'processing') return -1; // always on top
@@ -100,11 +96,9 @@ export default function Dashboard() {
     return new Date(b.createdAt) - new Date(a.createdAt); // newest first within same priority
   }
 
-  const filtered = (activeFilter === 'all'
+  const filtered = (filter === 'all'
     ? mail
-    : activeFilter === 'action_needed'
-      ? mail.filter((m) => m.status === 'new' && m.suggestedActions?.length > 0)
-      : mail.filter((m) => m.category === activeFilter)
+    : mail.filter((m) => m.category === filter)
   ).slice().sort(prioritySort);
 
   if (loading) {
@@ -133,22 +127,20 @@ export default function Dashboard() {
 
       {mail.length > 0 && (
         <div className="stats-row">
-          <button className={`stat-card ${activeFilter === 'action_needed' ? 'active' : ''}`} onClick={() => setFilter(activeFilter === 'action_needed' ? 'all' : 'action_needed')}>
+          <div className={`stat-card${newCount > 0 ? ' urgent' : ''}`}>
             <Inbox size={20} />
             <div>
               <span className="stat-number">{newCount}</span>
-              <span className="stat-label">Needs Action</span>
+              <span className="stat-label">Action needed</span>
             </div>
-          </button>
-          {urgentCount > 0 && (
-            <div className="stat-card urgent">
-              <AlertTriangle size={20} />
-              <div>
-                <span className="stat-number">{urgentCount}</span>
-                <span className="stat-label">Urgent</span>
-              </div>
+          </div>
+          <div className="stat-card">
+            <Inbox size={20} />
+            <div>
+              <span className="stat-number">{mail.length}</span>
+              <span className="stat-label">Total</span>
             </div>
-          )}
+          </div>
           <button className="stat-card search-toggle" onClick={() => setShowSearch(!showSearch)}>
             <Search size={20} />
             <div>
@@ -206,14 +198,13 @@ export default function Dashboard() {
 
       {mail.length > 0 && (
         <div className="filter-bar">
-          {['all', 'action_needed', 'bill', 'personal', 'government', 'financial', 'medical', 'delivery', 'reminder'].map((f) => (
+          {['all', 'bill', 'personal', 'government', 'financial', 'medical', 'delivery', 'reminder'].map((f) => (
             <button
               key={f}
-              className={`filter-chip ${activeFilter === f ? 'active' : ''}`}
+              className={`filter-chip ${filter === f ? 'active' : ''}`}
               onClick={() => setFilter(f)}
             >
-              {f === 'action_needed' ? 'Needs Action' : f.charAt(0).toUpperCase() + f.slice(1)}
-              {f === 'action_needed' && newCount > 0 && <span className="filter-count">{newCount}</span>}
+              {f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
         </div>

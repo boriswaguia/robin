@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardList, AlertTriangle, Clock, CalendarDays, ChevronRight, Inbox, CheckCircle2 } from 'lucide-react';
-import { getAgenda } from '../services/api';
+import { ClipboardList, AlertTriangle, Clock, CalendarDays, ChevronRight, Inbox, CheckCircle2, Circle } from 'lucide-react';
+import { getAgenda, performAction } from '../services/api';
 import { getCategoryColor, getCategoryIcon } from '../utils';
 
 function formatDueDate(iso) {
@@ -20,20 +20,42 @@ function formatDueDate(iso) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function AgendaItem({ item }) {
-  const isActionTaken = item.status !== 'new' && item.status !== 'processing' && item.status !== 'error' && item.status !== 'rejected';
+function AgendaItem({ item, onDone }) {
+  const [marking, setMarking] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function handleMarkDone(e) {
+    e.preventDefault(); // don't navigate via the Link
+    e.stopPropagation();
+    if (marking) return;
+    setMarking(true);
+    try {
+      await performAction(item.id, 'archive', 'Marked done from Agenda');
+      setDone(true);
+      // Let the fade-out animation play, then remove from list
+      setTimeout(() => onDone(item.id), 350);
+    } catch {
+      setMarking(false);
+    }
+  }
 
   return (
-    <Link to={`/mail/${item.id}`} className="agenda-item">
-      <div className="agenda-item-left">
-        <span className={`agenda-cat ${getCategoryColor(item.category)}`}>
-          {getCategoryIcon(item.category)}
-        </span>
-      </div>
+    <Link to={`/mail/${item.id}`} className={`agenda-item${done ? ' agenda-item-done' : ''}`}>
+      <button
+        className={`agenda-check${done ? ' checked' : ''}`}
+        onClick={handleMarkDone}
+        disabled={marking}
+        title="Mark as done"
+        aria-label="Mark as done"
+      >
+        {done ? <CheckCircle2 size={22} /> : <Circle size={22} />}
+      </button>
       <div className="agenda-item-body">
         <h4>
+          <span className={`agenda-cat-dot ${getCategoryColor(item.category)}`}>
+            {getCategoryIcon(item.category)}
+          </span>
           {item.sender && item.sender !== 'Unknown' ? item.sender : 'Mail'}
-          {isActionTaken && <CheckCircle2 size={14} className="agenda-done-icon" />}
         </h4>
         <p>{item.summary}</p>
         <div className="agenda-item-meta">
@@ -46,7 +68,7 @@ function AgendaItem({ item }) {
   );
 }
 
-function AgendaSection({ title, icon: Icon, items, variant }) {
+function AgendaSection({ title, icon: Icon, items, variant, onDone }) {
   if (items.length === 0) return null;
 
   return (
@@ -58,7 +80,7 @@ function AgendaSection({ title, icon: Icon, items, variant }) {
       </div>
       <div className="agenda-section-list">
         {items.map((item) => (
-          <AgendaItem key={item.id} item={item} />
+          <AgendaItem key={item.id} item={item} onDone={onDone} />
         ))}
       </div>
     </div>
@@ -75,6 +97,15 @@ export default function Agenda() {
       .catch(() => setAgenda({ overdue: [], thisWeek: [], upcoming: [] }))
       .finally(() => setLoading(false));
   }, []);
+
+  // Optimistically remove a completed item from all sections
+  function handleDone(itemId) {
+    setAgenda((prev) => ({
+      overdue: prev.overdue.filter((i) => i.id !== itemId),
+      thisWeek: prev.thisWeek.filter((i) => i.id !== itemId),
+      upcoming: prev.upcoming.filter((i) => i.id !== itemId),
+    }));
+  }
 
   if (loading) {
     return <div className="loading">Loading agenda…</div>;
@@ -110,6 +141,7 @@ export default function Agenda() {
         icon={AlertTriangle}
         items={overdue}
         variant="overdue"
+        onDone={handleDone}
       />
 
       <AgendaSection
@@ -117,6 +149,7 @@ export default function Agenda() {
         icon={Clock}
         items={thisWeek}
         variant="thisweek"
+        onDone={handleDone}
       />
 
       <AgendaSection
@@ -124,6 +157,7 @@ export default function Agenda() {
         icon={CalendarDays}
         items={upcoming}
         variant="upcoming"
+        onDone={handleDone}
       />
     </div>
   );
