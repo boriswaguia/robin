@@ -7,7 +7,7 @@ import MailCard from './MailCard';
 export default function Dashboard() {
   const [mail, setMail] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(null); // null = auto-pick on first load
   const [showSearch, setShowSearch] = useState(false);
   const [searchParams, setSearchParams] = useState({ q: '', sender: '', receiver: '', dateFrom: '', dateTo: '' });
   const [isSearching, setIsSearching] = useState(false);
@@ -76,14 +76,35 @@ export default function Dashboard() {
     fetchMail().finally(() => setLoading(false));
   }
 
-  const filtered = filter === 'all'
-    ? mail
-    : filter === 'action_needed'
-      ? mail.filter((m) => m.status === 'new')
-      : mail.filter((m) => m.category === filter);
+  // Items that genuinely need user attention (new + has suggested actions, excluding errors)
+  const actionNeeded = mail.filter((m) => m.status === 'new' && m.suggestedActions?.length > 0);
+  const newCount = actionNeeded.length;
+  const urgentCount = actionNeeded.filter((m) => m.urgency === 'high').length;
 
-  const newCount = mail.filter((m) => m.status === 'new').length;
-  const urgentCount = mail.filter((m) => m.urgency === 'high' && m.status === 'new').length;
+  // Auto-pick default filter on first load
+  const activeFilter = filter ?? (newCount > 0 ? 'action_needed' : 'all');
+
+  // Priority sort: urgent action-needed → action-needed → new/info → done → error/rejected
+  function prioritySort(a, b) {
+    function score(m) {
+      if (m.status === 'error' || m.status === 'rejected') return 5;
+      if (m.status !== 'new') return 4; // action already taken
+      if (!m.suggestedActions?.length) return 3; // informational
+      if (m.urgency === 'high') return 0;
+      if (m.urgency === 'medium') return 1;
+      return 2; // low urgency but needs action
+    }
+    const diff = score(a) - score(b);
+    if (diff !== 0) return diff;
+    return new Date(b.createdAt) - new Date(a.createdAt); // newest first within same priority
+  }
+
+  const filtered = (activeFilter === 'all'
+    ? mail
+    : activeFilter === 'action_needed'
+      ? mail.filter((m) => m.status === 'new' && m.suggestedActions?.length > 0)
+      : mail.filter((m) => m.category === activeFilter)
+  ).slice().sort(prioritySort);
 
   if (loading) {
     return <div className="loading">Loading your mail…</div>;
@@ -111,13 +132,13 @@ export default function Dashboard() {
 
       {mail.length > 0 && (
         <div className="stats-row">
-          <div className="stat-card">
+          <button className={`stat-card ${activeFilter === 'action_needed' ? 'active' : ''}`} onClick={() => setFilter(activeFilter === 'action_needed' ? 'all' : 'action_needed')}>
             <Inbox size={20} />
             <div>
               <span className="stat-number">{newCount}</span>
               <span className="stat-label">Needs Action</span>
             </div>
-          </div>
+          </button>
           {urgentCount > 0 && (
             <div className="stat-card urgent">
               <AlertTriangle size={20} />
@@ -187,10 +208,11 @@ export default function Dashboard() {
           {['all', 'action_needed', 'bill', 'personal', 'government', 'financial', 'medical', 'reminder'].map((f) => (
             <button
               key={f}
-              className={`filter-chip ${filter === f ? 'active' : ''}`}
+              className={`filter-chip ${activeFilter === f ? 'active' : ''}`}
               onClick={() => setFilter(f)}
             >
               {f === 'action_needed' ? 'Needs Action' : f.charAt(0).toUpperCase() + f.slice(1)}
+              {f === 'action_needed' && newCount > 0 && <span className="filter-count">{newCount}</span>}
             </button>
           ))}
         </div>
