@@ -66,12 +66,10 @@ function passesTier1(message) {
   const headers = message.payload?.headers || [];
   const h = (name) => headers.find((x) => x.name.toLowerCase() === name.toLowerCase())?.value || '';
 
-  // Marketing/newsletter signal
-  if (h('List-Unsubscribe')) return false;
-  if (h('List-Id')) return false;
+  // Bulk/automated mail signal
   if (h('Precedence').toLowerCase() === 'bulk') return false;
 
-  // Gmail category labels
+  // Gmail category labels — trust Google's classification
   const labels = message.labelIds || [];
   if (labels.includes('CATEGORY_PROMOTIONS')) return false;
   if (labels.includes('CATEGORY_SOCIAL')) return false;
