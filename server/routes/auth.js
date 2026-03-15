@@ -78,11 +78,15 @@ router.post('/login', loginRules, async (req, res) => {
 
     const user = await prisma.user.findUnique({ where: { email } });
 
-    // Always run bcrypt compare even if user not found — prevents timing attacks
-    const dummyHash = '$2b$12$invalidhashtopreventtimingattacks000000000000000000000';
-    const valid = user
-      ? await bcrypt.compare(password, user.password)
-      : await bcrypt.compare(password, dummyHash).then(() => false);
+    // Always run bcrypt even if user not found — prevents timing-based user enumeration.
+    // We use bcrypt.hash (not compare) for the dummy path to avoid depending on a
+    // hard-coded hash string whose format may be rejected by future bcrypt versions.
+    let valid = false;
+    if (user) {
+      valid = await bcrypt.compare(password, user.password);
+    } else {
+      await bcrypt.hash(password, 12).catch(() => {});
+    }
 
     if (!user || !valid) {
       return res.status(401).json({ error: 'Invalid email or password' });
