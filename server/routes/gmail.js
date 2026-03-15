@@ -5,6 +5,7 @@ import { authenticate } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
 import prisma from '../services/db.js';
 import { getAuthUrl, exchangeCode, syncGmail, isSyncActive } from '../services/gmail.js';
+import { logActivity } from '../middleware/admin.js';
 
 const router = express.Router();
 
@@ -118,6 +119,8 @@ router.post('/sync', authenticate, async (req, res) => {
   syncGmail(req.user.id).catch((err) => {
     console.error('Background Gmail sync error:', err.message);
   });
+
+  logActivity(req.user.id, 'gmail.sync');
 
   // Return immediately — client will see 'processing' items via Dashboard polling
   res.status(202).json({ started: true, message: 'Sync started. New emails will appear shortly.' });

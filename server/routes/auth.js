@@ -7,6 +7,7 @@ import { body, validationResult } from 'express-validator';
 import prisma from '../services/db.js';
 import { signToken, authenticate, setSessionCookie, clearSessionCookie } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
+import { logActivity } from '../middleware/admin.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -58,8 +59,9 @@ router.post('/register', registerRules, async (req, res) => {
     const token = signToken(user);
     setSessionCookie(res, token);
 
+    logActivity(user.id, 'auth.register');
     res.status(201).json({
-      user: { id: user.id, email: user.email, name: user.name, consentedAt: user.consentedAt, consentVersion: user.consentVersion },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, consentedAt: user.consentedAt, consentVersion: user.consentVersion },
     });
   } catch (err) {
     console.error('Register error:', err);
@@ -94,7 +96,8 @@ router.post('/login', loginRules, async (req, res) => {
     const token = signToken(user);
     setSessionCookie(res, token);
 
-    res.json({ user: { id: user.id, email: user.email, name: user.name, consentedAt: user.consentedAt, consentVersion: user.consentVersion } });
+    logActivity(user.id, 'auth.login');
+    res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role, consentedAt: user.consentedAt, consentVersion: user.consentVersion } });
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ error: 'Login failed' });
@@ -105,6 +108,7 @@ router.post('/login', loginRules, async (req, res) => {
 router.post('/logout', authenticate, async (req, res) => {
   // Bump tokenVersion so this JWT (and any copies) cannot be reused
   await prisma.user.update({ where: { id: req.user.id }, data: { tokenVersion: { increment: 1 } } });
+  logActivity(req.user.id, 'auth.logout');
   clearSessionCookie(res);
   res.json({ success: true });
 });
@@ -121,7 +125,7 @@ router.get('/me', authenticate, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: { id: true, email: true, name: true, createdAt: true, consentedAt: true, consentVersion: true },
+      select: { id: true, email: true, name: true, role: true, createdAt: true, consentedAt: true, consentVersion: true },
     });
 
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -148,7 +152,7 @@ router.post('/consent', authenticate, async (req, res) => {
         consentedAt: new Date(),
         consentVersion: CURRENT_TERMS_VERSION,
       },
-      select: { id: true, email: true, name: true, consentedAt: true, consentVersion: true },
+      select: { id: true, email: true, name: true, role: true, consentedAt: true, consentVersion: true },
     });
 
     res.json(user);

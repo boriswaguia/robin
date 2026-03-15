@@ -9,6 +9,7 @@ import { analyzeMail, findRelatedMail, analyzeVoice } from '../services/ai.js';
 import { getAllMail, getMailById, saveMail, updateMail, deleteMail, getRelatedMail, getContacts, getMailByContact, getDueReminders, getAgendaItems } from '../services/storage.js';
 import { authenticate } from '../middleware/auth.js';
 import { encryptBuffer, isEncryptionEnabled } from '../services/crypto.js';
+import { logActivity } from '../middleware/admin.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const router = express.Router();
@@ -68,6 +69,8 @@ router.post('/scan', upload.array('images', 10), async (req, res) => {
       // SECURITY: Only log the message, not the full error (may contain extracted document content)
       console.error(`Background processing failed for mail ${mailItem.id}:`, err.message);
     });
+
+    logActivity(req.user.id, 'mail.scan', { count: files.length, metadata: { pages: files.length } });
 
     // Return immediately — client will poll for updates
     res.status(202).json(mailItem);
@@ -378,6 +381,7 @@ router.patch('/:id/action', async (req, res) => {
   const updated = await updateMail(req.params.id, req.user.id, updates);
 
   if (!updated) return res.status(404).json({ error: 'Mail not found' });
+  logActivity(req.user.id, 'mail.action', { metadata: { action } });
   res.json(updated);
 });
 
@@ -410,6 +414,7 @@ router.delete('/:id', async (req, res) => {
   }
 
   await deleteMail(req.params.id, req.user.id);
+  logActivity(req.user.id, 'mail.delete');
   res.json({ success: true });
 });
 
@@ -453,6 +458,7 @@ router.post('/voice', audioUpload.single('audio'), async (req, res) => {
       source: 'voice',
     });
 
+    logActivity(req.user.id, 'mail.voice');
     res.status(201).json(mailItem);
   } catch (err) {
     console.error('Voice analysis error:', err);

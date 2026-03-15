@@ -11,6 +11,7 @@ import ContactDetail from './components/ContactDetail';
 import AuthPage from './components/AuthPage';
 import Integrations from './components/Integrations';
 import Agenda from './components/Agenda';
+import AdminPanel from './components/AdminPanel';
 import ConsentScreen from './components/ConsentScreen';
 import LandingPage from './components/LandingPage';
 import CookieConsent from './components/CookieConsent';
@@ -91,6 +92,8 @@ function AppRoutes() {
         <Route path="/directory/:name" element={<ContactDetail />} />
         <Route path="/mail/:id" element={<MailDetail />} />
         <Route path="/integrations" element={<Integrations />} />
+        {/* Admin panel — only rendered for admin users, server enforces access */}
+        <Route path="/admin" element={<AdminPanel />} />
         {/* Redirect auth pages to dashboard when already logged in */}
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="/register" element={<Navigate to="/" replace />} />

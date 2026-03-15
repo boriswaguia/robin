@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Mail, ScanLine, Home, LogOut, CalendarDays, BookUser, Settings, ClipboardList } from 'lucide-react';
+import { Mail, ScanLine, Home, LogOut, CalendarDays, BookUser, Settings, ClipboardList, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Layout({ children }) {
@@ -15,6 +15,11 @@ export default function Layout({ children }) {
         </Link>
         <div className="header-right">
           <span className="user-name">{user?.name}</span>
+          {user?.role === 'admin' && (
+            <Link to="/admin" className="header-icon-btn" title="Admin Panel">
+              <ShieldCheck size={18} />
+            </Link>
+          )}
           <Link to="/integrations" className="header-icon-btn" title="Integrations">
             <Settings size={18} />
           </Link>

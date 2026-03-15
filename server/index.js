@@ -11,6 +11,8 @@ import { uploadsRouter } from './routes/uploads.js';
 import { gmailRouter } from './routes/gmail.js';
 import { sharingRouter } from './routes/sharing.js';
 import { pushRouter } from './routes/push.js';
+import { adminRouter } from './routes/admin.js';
+import prisma from './services/db.js';
 import { ensureDirs } from './services/storage.js';
 import { configurePush } from './services/push.js';
 import { startScheduler } from './services/scheduler.js';
@@ -87,6 +89,7 @@ app.use('/api/mail', mailRouter);
 app.use('/api/gmail', gmailRouter);
 app.use('/api/sharing', sharingRouter);
 app.use('/api/push', pushRouter);
+app.use('/api/admin', adminRouter);
 
 // In production, serve the React build
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
@@ -95,6 +98,20 @@ app.get('*', (_req, res) => {
   res.sendFile(path.join(clientDist, 'index.html'));
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Robin server running on http://localhost:${PORT}`);
+
+  // Auto-promote ADMIN_EMAIL to admin role (if set and user exists)
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (adminEmail) {
+    try {
+      const result = await prisma.user.updateMany({
+        where: { email: adminEmail, role: { not: 'admin' } },
+        data: { role: 'admin' },
+      });
+      if (result.count > 0) console.log(`Promoted ${adminEmail} to admin`);
+    } catch (err) {
+      console.error('ADMIN_EMAIL promotion failed:', err.message);
+    }
+  }
 });

@@ -32,6 +32,7 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_EMAIL: ${VAPID_EMAIL:-mailto:admin@robin.app}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       NODE_ENV: production
       PORT: 3001
     volumes:
