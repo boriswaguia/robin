@@ -7,14 +7,22 @@ import { downloadCalendarEvent } from '../services/calendar';
 import { extractSepaFields } from '../services/sepa';
 import SepaPayModal from './SepaPayModal';
 
-const ACTION_CONFIG = {
-  archive: { label: 'Archive', icon: Archive, color: 'blue', desc: 'File away for records' },
-  reply: { label: 'Reply', icon: Reply, color: 'green', desc: 'Write back to sender' },
-  pay_bill: { label: 'Pay Bill', icon: CreditCard, color: 'orange', desc: 'Make payment' },
+// Categorization actions — label what needs to be done (item stays active)
+const CATEGORIZE_ACTIONS = {
+  reply: { label: 'To Reply', icon: Reply, color: 'green', desc: 'Needs a reply' },
+  pay_bill: { label: 'To Pay', icon: CreditCard, color: 'orange', desc: 'Needs payment' },
   schedule_followup: { label: 'Follow Up', icon: CalendarClock, color: 'purple', desc: 'Set a follow-up date' },
-  discard: { label: 'Discard', icon: Trash2, color: 'red', desc: 'Not needed' },
   mark_important: { label: 'Important', icon: Star, color: 'yellow', desc: 'Flag for attention' },
 };
+
+// Completion actions — resolve the item
+const COMPLETE_ACTIONS = {
+  archive: { label: 'Archive', icon: Archive, color: 'blue', desc: 'File away for records' },
+  discard: { label: 'Discard', icon: Trash2, color: 'red', desc: 'Not needed' },
+};
+
+// Combined for lookups
+const ACTION_CONFIG = { ...CATEGORIZE_ACTIONS, ...COMPLETE_ACTIONS };
 
 const CATEGORIES = ['bill', 'personal', 'government', 'legal', 'medical', 'insurance', 'financial', 'advertisement', 'subscription', 'reminder', 'tax', 'other'];
 const URGENCIES = ['low', 'medium', 'high'];
@@ -318,14 +326,15 @@ export default function MailDetail() {
           const primaryAction = suggested[0];
           const primaryConfig = primaryAction ? ACTION_CONFIG[primaryAction] : null;
           const dueInfo = getDueDaysText(item.dueDate);
-          const isActionTaken = item.status !== 'new';
-          const needsAction = suggested.length > 0 && !isActionTaken;
+          const isCompleted = item.status === 'action_taken' || item.status === 'discarded';
+          const hasLabel = item.actionTaken && CATEGORIZE_ACTIONS[item.actionTaken];
+          const needsAction = suggested.length > 0 && !isCompleted;
           const PrimaryIcon = primaryConfig?.icon;
 
           return (
-            <div className={`action-banner ${isActionTaken ? 'done' : needsAction ? (item.urgency === 'high' ? 'urgent' : item.urgency === 'medium' ? 'medium' : 'action') : 'info'}`}>
+            <div className={`action-banner ${isCompleted ? 'done' : needsAction ? (item.urgency === 'high' ? 'urgent' : item.urgency === 'medium' ? 'medium' : 'action') : 'info'}`}>
               <div className="action-banner-header">
-                {isActionTaken ? (
+                {isCompleted ? (
                   <>
                     <CheckCircle2 size={20} className="banner-icon done" />
                     <div className="banner-text">
@@ -337,11 +346,16 @@ export default function MailDetail() {
                   <>
                     <AlertTriangle size={20} className="banner-icon" />
                     <div className="banner-text">
-                      <span className="banner-title">Action Required</span>
+                      <span className="banner-title">
+                        {hasLabel ? `Labeled: ${CATEGORIZE_ACTIONS[item.actionTaken].label}` : 'Action Required'}
+                      </span>
                       <span className="banner-subtitle">
-                        {primaryConfig && `Recommended: ${primaryConfig.label}`}
-                        {dueInfo && ` · ${dueInfo.text}`}
-                        {item.amountDue && ` · ${item.amountDue}`}
+                        {primaryConfig && !hasLabel && `Recommended: ${primaryConfig.label}`}
+                        {hasLabel && item.actionNote && item.actionNote}
+                        {!hasLabel && dueInfo && ` · ${dueInfo.text}`}
+                        {!hasLabel && item.amountDue && ` · ${item.amountDue}`}
+                        {hasLabel && dueInfo && ` · ${dueInfo.text}`}
+                        {hasLabel && item.amountDue && ` · ${item.amountDue}`}
                       </span>
                     </div>
                   </>
@@ -356,25 +370,27 @@ export default function MailDetail() {
                 )}
               </div>
 
-              {!isActionTaken && !item.readOnly && (
+              {!isCompleted && !item.readOnly && (
                 <div className="action-banner-actions">
-                  {primaryConfig && (
-                    <button
-                      className={`action-cta ${primaryConfig.color}`}
-                      onClick={() => handleAction(primaryAction)}
-                      disabled={acting !== null}
-                    >
-                      <PrimaryIcon size={18} />
-                      <span>{primaryConfig.label}</span>
-                    </button>
-                  )}
+                  {/* Done button — always visible for active items */}
+                  <button
+                    className="action-cta done-btn"
+                    onClick={() => executeAction('archive')}
+                    disabled={acting !== null}
+                  >
+                    <CheckCircle2 size={18} />
+                    <span>Done</span>
+                  </button>
+
+                  {/* Categorization actions */}
                   <div className="action-secondary-row">
-                    {Object.entries(ACTION_CONFIG).filter(([key]) => key !== primaryAction).map(([key, config]) => {
+                    {Object.entries(CATEGORIZE_ACTIONS).map(([key, config]) => {
                       const Icon = config.icon;
+                      const isActive = item.actionTaken === key;
                       return (
                         <button
                           key={key}
-                          className={`action-secondary ${config.color} ${suggested.includes(key) ? 'suggested' : ''}`}
+                          className={`action-secondary ${config.color} ${suggested.includes(key) ? 'suggested' : ''} ${isActive ? 'active-label' : ''}`}
                           onClick={() => handleAction(key)}
                           disabled={acting !== null}
                           title={config.desc}
@@ -384,6 +400,15 @@ export default function MailDetail() {
                         </button>
                       );
                     })}
+                    <button
+                      className="action-secondary red"
+                      onClick={() => handleAction('discard')}
+                      disabled={acting !== null}
+                      title="Not needed"
+                    >
+                      <Trash2 size={16} />
+                      <span>Discard</span>
+                    </button>
                   </div>
                 </div>
               )}

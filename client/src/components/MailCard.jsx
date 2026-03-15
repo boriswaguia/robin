@@ -2,13 +2,16 @@ import { getCategoryColor, getCategoryIcon, formatDate } from '../utils';
 import { Loader2, AlertCircle, ShieldX, Mic, AlertTriangle, CheckCircle2, Archive, Reply, CreditCard, CalendarClock, Trash2, Star } from 'lucide-react';
 
 const ACTION_LABELS = {
-  archive: { label: 'Archive', icon: Archive },
-  reply: { label: 'Reply', icon: Reply },
-  pay_bill: { label: 'Pay Bill', icon: CreditCard },
+  archive: { label: 'Archived', icon: Archive },
+  reply: { label: 'To Reply', icon: Reply },
+  pay_bill: { label: 'To Pay', icon: CreditCard },
   schedule_followup: { label: 'Follow Up', icon: CalendarClock },
-  discard: { label: 'Discard', icon: Trash2 },
+  discard: { label: 'Discarded', icon: Trash2 },
   mark_important: { label: 'Important', icon: Star },
 };
+
+// Categorization actions keep item active — only archive/discard resolve
+const RESOLVING_ACTIONS = ['archive', 'discard'];
 
 export default function MailCard({ item, sharedBy }) {
   const isProcessing = item.status === 'processing';
@@ -63,11 +66,13 @@ export default function MailCard({ item, sharedBy }) {
   const suggested = item.suggestedActions || [];
   const primaryAction = suggested[0];
   const primaryLabel = primaryAction ? ACTION_LABELS[primaryAction] : null;
-  const isActionTaken = item.status !== 'new' && item.status !== 'processing' && item.status !== 'error' && item.status !== 'rejected';
+  const isCompleted = item.status === 'action_taken' || item.status === 'discarded';
+  const hasLabel = item.actionTaken && !RESOLVING_ACTIONS.includes(item.actionTaken);
+  const needsAction = suggested.length > 0 && !isCompleted;
   const PrimaryIcon = primaryLabel?.icon;
 
   return (
-    <div className={`mail-card ${item.status === 'new' ? 'new' : ''} ${suggested.length > 0 && !isActionTaken ? (item.urgency === 'high' ? 'needs-action-urgent' : 'needs-action') : ''}`}>
+    <div className={`mail-card ${item.status === 'new' ? 'new' : ''} ${needsAction ? (item.urgency === 'high' ? 'needs-action-urgent' : 'needs-action') : ''}`}>
       <div className="mail-card-top">
         <span className={`category-badge ${getCategoryColor(item.category)}`}>
           {getCategoryIcon(item.category)} {item.category}
@@ -76,16 +81,17 @@ export default function MailCard({ item, sharedBy }) {
         {item.source === 'voice' && <span className="source-badge voice"><Mic size={11} /> Voice</span>}
         {sharedBy && <span className="source-badge shared">via {sharedBy.name}</span>}
         {item.urgency === 'high' && <span className="urgency-badge">Urgent</span>}
-        {isActionTaken && <span className="status-badge">{item.actionTaken?.replace('_', ' ') || item.status}</span>}
+        {hasLabel && <span className="status-badge label-badge">{ACTION_LABELS[item.actionTaken]?.label || item.actionTaken?.replace('_', ' ')}</span>}
+        {isCompleted && <span className="status-badge">{ACTION_LABELS[item.actionTaken]?.label || item.actionTaken?.replace('_', ' ')}</span>}
       </div>
       <div className="mail-card-body">
         <h4>{item.sender && item.sender !== 'Unknown' ? item.sender : (item.summary ? 'Mail' : 'Unknown Sender')}</h4>
         <p>{item.summary}</p>
       </div>
-      {!isActionTaken && primaryLabel && (
+      {needsAction && primaryLabel && (
         <div className="mail-card-action-hint">
           <AlertTriangle size={13} />
-          <span>{primaryLabel.label}</span>
+          <span>{hasLabel ? ACTION_LABELS[item.actionTaken]?.label : primaryLabel.label}</span>
           {item.dueDate && (() => {
             const diffDays = Math.ceil((new Date(item.dueDate) - new Date()) / 86400000);
             if (diffDays < 0) return <span className="hint-due overdue">{Math.abs(diffDays)}d overdue</span>;
@@ -95,7 +101,7 @@ export default function MailCard({ item, sharedBy }) {
           })()}
         </div>
       )}
-      {isActionTaken && (
+      {isCompleted && (
         <div className="mail-card-action-hint done">
           <CheckCircle2 size={13} />
           <span>{ACTION_LABELS[item.actionTaken]?.label || item.actionTaken?.replace('_', ' ')}</span>

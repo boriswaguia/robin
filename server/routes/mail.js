@@ -309,11 +309,21 @@ router.patch('/:id/action', async (req, res) => {
     return res.status(400).json({ error: `Invalid action. Must be one of: ${validActions.join(', ')}` });
   }
 
-  const updated = await updateMail(req.params.id, req.user.id, {
-    status: action === 'discard' ? 'discarded' : 'action_taken',
+  // Resolving actions: these complete/remove the item from active lists
+  const resolvingActions = ['archive', 'discard'];
+  const isResolving = resolvingActions.includes(action);
+
+  const updates = {
     actionTaken: action,
     actionNote: note || null,
-  });
+  };
+
+  // Only change status for actions that actually resolve the item
+  if (isResolving) {
+    updates.status = action === 'discard' ? 'discarded' : 'action_taken';
+  }
+
+  const updated = await updateMail(req.params.id, req.user.id, updates);
 
   if (!updated) return res.status(404).json({ error: 'Mail not found' });
   res.json(updated);
