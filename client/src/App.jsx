@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -65,6 +65,9 @@ function AppRoutes() {
         <Route path="/directory/:name" element={<ContactDetail />} />
         <Route path="/mail/:id" element={<MailDetail />} />
         <Route path="/integrations" element={<Integrations />} />
+        {/* Redirect auth pages to dashboard when already logged in */}
+        <Route path="/login" element={<Navigate to="/" replace />} />
+        <Route path="/register" element={<Navigate to="/" replace />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>
