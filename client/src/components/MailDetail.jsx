@@ -48,7 +48,7 @@ export default function MailDetail() {
   const [showText, setShowText] = useState(false);
   const [showImage, setShowImage] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
-  const [showSepa, setShowSepa] = useState(false);
+  const [showSepaIdx, setShowSepaIdx] = useState(null); // null = closed, index into ibans array
   const [editing, setEditing] = useState(false);
   const [editFields, setEditFields] = useState({});
   const [saving, setSaving] = useState(false);
@@ -206,10 +206,16 @@ export default function MailDetail() {
   if (!item) return null;
 
   const sepaFields = extractSepaFields(item.actionableInfo || []);
-  const hasSepa = !!sepaFields.iban;
-  const imageUrls = (item.imageUrls || [item.imageUrl]).filter(Boolean);
+  const hasSepa = sepaFields.ibans.length > 0;
+  // For installment children, use parent's images
+  const parentImages = item.parent ? (item.parent.imageUrls || [item.parent.imageUrl]).filter(Boolean) : [];
+  const imageUrls = (item.imageUrls || [item.imageUrl]).filter(Boolean).length > 0
+    ? (item.imageUrls || [item.imageUrl]).filter(Boolean)
+    : parentImages;
   const hasImages = imageUrls.length > 0;
   const isMultiPage = imageUrls.length > 1;
+  const hasInstallments = item.installments && item.installments.length > 0;
+  const isChildInstallment = !!item.parentId;
 
   return (
     <div className="mail-detail">
@@ -318,6 +324,7 @@ export default function MailDetail() {
               {item.urgency === 'medium' && <span className="urgency-badge medium">Medium</span>}
               {item.source === 'gmail' && <span className="source-badge gmail">Gmail</span>}
               {item.source === 'voice' && <span className="source-badge voice"><Mic size={11} /> Voice</span>}
+              {item.installmentLabel && <span className="source-badge installment">{item.installmentLabel}</span>}
             </>
           )}
         </div>
@@ -541,12 +548,12 @@ export default function MailDetail() {
           </button>
         )}
 
-        {!editing && hasSepa && (
-          <button className="btn btn-sepa" onClick={() => setShowSepa(true)}>
+        {!editing && hasSepa && sepaFields.ibans.map((entry, idx) => (
+          <button key={idx} className="btn btn-sepa" onClick={() => setShowSepaIdx(idx)}>
             <Landmark size={18} />
-            <span>Pay via SEPA</span>
+            <span>{sepaFields.ibans.length > 1 ? `Pay ${entry.label || entry.iban}` : 'Pay via SEPA'}</span>
           </button>
-        )}
+        ))}
 
         {!editing && item.actionableInfo && item.actionableInfo.length > 0 && (
           <div className="actionable-info">
@@ -564,6 +571,37 @@ export default function MailDetail() {
                 />
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Installment breakdown (parent items) */}
+        {!editing && hasInstallments && (
+          <div className="installment-section">
+            <h4><CreditCard size={16} /> Payment Schedule</h4>
+            <div className="installment-list">
+              {item.installments.map((inst) => {
+                const isPaid = inst.status === 'action_taken' || inst.status === 'discarded';
+                const isOverdue = inst.dueDate && new Date(inst.dueDate) < new Date() && !isPaid;
+                return (
+                  <Link key={inst.id} to={`/mail/${inst.id}`} className={`installment-row ${isPaid ? 'paid' : ''} ${isOverdue ? 'overdue' : ''}`}>
+                    <span className="inst-label">{inst.installmentLabel || 'Installment'}</span>
+                    <span className="inst-amount">{inst.amountDue || '—'}</span>
+                    <span className="inst-due">{inst.dueDate ? formatDate(inst.dueDate) : '—'}</span>
+                    {isPaid ? <CheckCircle2 size={14} className="inst-paid-icon" /> : isOverdue ? <AlertTriangle size={14} className="inst-overdue-icon" /> : <Clock size={14} className="inst-pending-icon" />}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Link back to parent document (child installments) */}
+        {!editing && isChildInstallment && item.parent && (
+          <div className="installment-parent-link">
+            <Link to={`/mail/${item.parent.id}`} className="btn btn-outline">
+              <Link2 size={16} />
+              View original document{item.parent.installmentLabel ? ` — ${item.parent.installmentLabel}` : ''}
+            </Link>
           </div>
         )}
 
@@ -635,8 +673,17 @@ export default function MailDetail() {
         </div>
       )}
 
-      {showSepa && (
-        <SepaPayModal item={item} sepaFields={sepaFields} onClose={() => setShowSepa(false)} />
+      {showSepaIdx !== null && (
+        <SepaPayModal
+          item={item}
+          sepaFields={{
+            iban: sepaFields.ibans[showSepaIdx]?.iban,
+            bic: sepaFields.ibans[showSepaIdx]?.bic,
+            recipient: sepaFields.recipient,
+            reference: sepaFields.reference,
+          }}
+          onClose={() => setShowSepaIdx(null)}
+        />
       )}
     </div>
   );

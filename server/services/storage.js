@@ -104,6 +104,15 @@ export async function getMailByContact(userId, contactName) {
 export async function getMailById(id, userId) {
   return prisma.mail.findFirst({
     where: { id, userId },
+    include: {
+      installments: {
+        orderBy: { dueDate: 'asc' },
+        select: { id: true, dueDate: true, amountDue: true, status: true, actionTaken: true, installmentLabel: true },
+      },
+      parent: {
+        select: { id: true, summary: true, imageUrl: true, imageUrls: true, installmentLabel: true },
+      },
+    },
   });
 }
 

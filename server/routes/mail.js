@@ -27,11 +27,11 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB per file (iPhone photos can be large)
   fileFilter: (_req, file, cb) => {
-    const allowed = /jpeg|jpg|png|gif|webp|bmp|tiff|pdf/;
+    const allowed = /jpeg|jpg|png|gif|webp|bmp|tiff|pdf|heic|heif/;
     const ext = allowed.test(path.extname(file.originalname).toLowerCase());
-    const mime = allowed.test(file.mimetype);
+    const mime = allowed.test(file.mimetype) || /image\/hei[cf]/.test(file.mimetype);
     cb(null, ext || mime);
   },
 });
@@ -131,7 +131,52 @@ async function processMailAsync(mailId, userId, imagePaths) {
       threadId,
       reminderAt,
       status: 'new', // processing complete → ready for user action
+      installmentLabel: Array.isArray(analysis.installments) ? analysis.installments[0]?.label || 'Installment 1' : null,
     });
+
+    // ── Create child items for remaining installments ──────────────────────
+    if (Array.isArray(analysis.installments) && analysis.installments.length > 1) {
+      const total = analysis.installments.length;
+      // Update parent with installment label
+      await updateMail(mailId, userId, { installmentLabel: `${analysis.installments[0]?.label || 'Rate 1'} (1/${total})` });
+
+      for (let i = 1; i < analysis.installments.length; i++) {
+        const inst = analysis.installments[i];
+        const instDueDate = inst.dueDate;
+        let instReminderAt = null;
+        if (instDueDate) {
+          try {
+            const due = new Date(instDueDate);
+            const rem = new Date(due.getTime() - 2 * 24 * 60 * 60 * 1000);
+            if (rem > new Date()) instReminderAt = rem;
+            else if (due > new Date()) instReminderAt = new Date();
+          } catch { /* skip */ }
+        }
+
+        await saveMail({
+          userId,
+          imageUrl: null, // don't duplicate images
+          imageUrls: null,
+          extractedText: analysis.extractedText || '',
+          summary: `${analysis.summary || ''} — ${inst.label || `Installment ${i + 1}`}`,
+          sender: (analysis.sender && analysis.sender !== 'Unknown') ? analysis.sender : null,
+          receiver: (analysis.receiver && analysis.receiver !== 'Unknown') ? analysis.receiver : null,
+          category: analysis.category,
+          urgency: analysis.urgency,
+          dueDate: instDueDate || null,
+          amountDue: inst.amount || null,
+          suggestedActions: analysis.suggestedActions || [],
+          keyDetails: analysis.keyDetails || [],
+          actionableInfo: analysis.actionableInfo || [],
+          threadId,
+          reminderAt: instReminderAt,
+          status: 'new',
+          parentId: mailId,
+          installmentLabel: `${inst.label || `Rate ${i + 1}`} (${i + 1}/${total})`,
+        });
+      }
+      console.log(`Created ${analysis.installments.length - 1} installment items for mail ${mailId}`);
+    }
 
     console.log(`Mail ${mailId} processed successfully`);
   } catch (err) {

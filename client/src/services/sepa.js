@@ -16,17 +16,57 @@ const LABEL_PATTERNS = {
 
 /**
  * Extract SEPA fields from a flexible actionableInfo array.
- * Returns { iban, bic, recipient, reference } — any may be null.
+ * Returns { ibans: [{ iban, bic, label }], recipient, reference } — ibans may be empty.
+ * Also includes a legacy `iban` / `bic` pointing to the first entry for backward compat.
  */
 export function extractSepaFields(actionableInfo = []) {
-  const fields = { iban: null, bic: null, recipient: null, reference: null };
+  const fields = { ibans: [], recipient: null, reference: null, iban: null, bic: null };
 
+  // First pass: collect IBANs with labels, and find recipient/reference
   for (const item of actionableInfo) {
     const label = item.label || '';
-    if (!fields.iban      && LABEL_PATTERNS.iban.test(label))      fields.iban      = item.value?.replace(/\s/g, '');
-    if (!fields.bic       && LABEL_PATTERNS.bic.test(label))       fields.bic       = item.value?.trim();
+    if (LABEL_PATTERNS.iban.test(label)) {
+      fields.ibans.push({
+        iban: item.value?.replace(/\s/g, ''),
+        bic: null,
+        label: label.replace(/\biban\b:?\s*/i, '').trim() || null,
+      });
+    }
     if (!fields.recipient && LABEL_PATTERNS.recipient.test(label)) fields.recipient = item.value?.trim();
     if (!fields.reference && LABEL_PATTERNS.reference.test(label)) fields.reference = item.value?.trim();
+  }
+
+  // Second pass: pair BICs with IBANs by matching bank name in label, or by order
+  const unmatchedBics = [];
+  for (const item of actionableInfo) {
+    const label = item.label || '';
+    if (!LABEL_PATTERNS.bic.test(label)) continue;
+    const bicLabel = label.replace(/\bbic\b:?\s*|\bswift\b:?\s*/gi, '').trim().toLowerCase();
+    const bic = item.value?.trim();
+    let matched = false;
+    if (bicLabel) {
+      for (const entry of fields.ibans) {
+        if (!entry.bic && entry.label && entry.label.toLowerCase().includes(bicLabel)) {
+          entry.bic = bic;
+          matched = true;
+          break;
+        }
+      }
+    }
+    if (!matched) unmatchedBics.push(bic);
+  }
+  // Assign remaining BICs by order
+  let bicIdx = 0;
+  for (const entry of fields.ibans) {
+    if (!entry.bic && bicIdx < unmatchedBics.length) {
+      entry.bic = unmatchedBics[bicIdx++];
+    }
+  }
+
+  // Legacy compat: first IBAN
+  if (fields.ibans.length > 0) {
+    fields.iban = fields.ibans[0].iban;
+    fields.bic = fields.ibans[0].bic;
   }
 
   return fields;

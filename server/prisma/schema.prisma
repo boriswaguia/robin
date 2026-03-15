@@ -52,6 +52,10 @@ model Mail {
   actionNote     String?
   source         String   @default("scan") // 'scan' | 'gmail'
   gmailMessageId String?  // prevents duplicate imports
+  parentId       String?  // link installment child items to parent document
+  parent         Mail?    @relation("Installments", fields: [parentId], references: [id], onDelete: Cascade)
+  installments   Mail[]   @relation("Installments")
+  installmentLabel String? // e.g. "Rate 2/4"
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   shares         MailShare[]
@@ -63,6 +67,7 @@ model Mail {
   @@index([userId, sender])
   @@index([userId, receiver])
   @@index([reminderAt, reminderSent])
+  @@index([parentId])
   @@unique([userId, gmailMessageId])
 }
 

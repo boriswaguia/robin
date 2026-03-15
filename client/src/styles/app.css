@@ -3789,3 +3789,115 @@ ul { list-style: none; }
   color: var(--text-secondary);
   flex-shrink: 0;
 }
+
+/* ── Installments ─────────────────────────────────────────── */
+
+.installment-badge {
+  background: #7c3aed20;
+  color: #7c3aed;
+  font-weight: 600;
+  font-size: 0.65rem;
+}
+
+.source-badge.installment {
+  background: #7c3aed20;
+  color: #7c3aed;
+  font-weight: 600;
+  font-size: 0.65rem;
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.installment-section {
+  margin-top: 16px;
+}
+
+.installment-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.installment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.installment-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--card);
+  text-decoration: none;
+  color: var(--text);
+  transition: background 0.15s;
+  border: 1px solid var(--border);
+}
+
+.installment-row:hover {
+  background: var(--hover);
+}
+
+.installment-row .inst-label {
+  flex: 1;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+.installment-row .inst-amount {
+  font-weight: 600;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.installment-row .inst-due {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.installment-row.paid {
+  opacity: 0.5;
+}
+
+.installment-row.paid .inst-label {
+  text-decoration: line-through;
+}
+
+.inst-paid-icon { color: #22c55e; }
+.inst-overdue-icon { color: #ef4444; }
+.inst-pending-icon { color: var(--text-secondary); }
+
+.installment-row.overdue {
+  border-color: #ef444440;
+  background: #ef444408;
+}
+
+.installment-parent-link {
+  margin-top: 12px;
+}
+
+.installment-parent-link .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--primary);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.installment-parent-link .btn:hover {
+  background: var(--hover);
+}

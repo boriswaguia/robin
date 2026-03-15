@@ -83,6 +83,7 @@ export default function MailCard({ item, sharedBy }) {
         {item.urgency === 'high' && <span className="urgency-badge">Urgent</span>}
         {hasLabel && <span className="status-badge label-badge">{ACTION_LABELS[item.actionTaken]?.label || item.actionTaken?.replace('_', ' ')}</span>}
         {isCompleted && <span className="status-badge">{ACTION_LABELS[item.actionTaken]?.label || item.actionTaken?.replace('_', ' ')}</span>}
+        {item.installmentLabel && <span className="status-badge installment-badge">{item.installmentLabel}</span>}
       </div>
       <div className="mail-card-body">
         <h4>{item.sender && item.sender !== 'Unknown' ? item.sender : (item.summary ? 'Mail' : 'Unknown Sender')}</h4>
