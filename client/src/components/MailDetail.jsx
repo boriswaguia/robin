@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, FileText, Image, CalendarPlus, ClipboardList, Copy, Check, Link2, Landmark, Pencil, Save, X, Bell, BellOff, ChevronLeft, ChevronRight, Share2, Users, Mic, AlertTriangle, CheckCircle2, Clock, Archive, Reply, CreditCard, CalendarClock, Star } from 'lucide-react';
+import { ArrowLeft, Trash2, FileText, Image, CalendarPlus, ClipboardList, Copy, Check, Link2, Landmark, Pencil, Save, X, Bell, BellOff, ChevronLeft, ChevronRight, Share2, Users, Mic, AlertTriangle, CheckCircle2, Clock, Archive, Reply, CreditCard, CalendarClock, Star, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { getMailById, deleteMailItem, editMail, setReminder, performAction, getSharingConnections, getMailShares, toggleMailShare } from '../services/api';
+import { getMailById, deleteMailItem, editMail, setReminder, performAction, rescanMail, getSharingConnections, getMailShares, toggleMailShare } from '../services/api';
 import { getCategoryColor, getCategoryIcon, formatDate } from '../utils';
 import { downloadCalendarEvent } from '../services/calendar';
 import { extractSepaFields } from '../services/sepa';
@@ -56,6 +56,7 @@ export default function MailDetail() {
   const [outgoingConns, setOutgoingConns] = useState([]); // accepted connections where I'm the from
   const [sharedWith, setSharedWith] = useState([]);       // userIds this item is explicitly shared with
   const [shareUpdating, setShareUpdating] = useState(false);
+  const [rescanning, setRescanning] = useState(false);
 
   useEffect(() => {
     getMailById(id)
@@ -74,6 +75,15 @@ export default function MailDetail() {
       .catch(() => navigate('/'))
       .finally(() => setLoading(false));
   }, [id, navigate]);
+
+  // Auto-refresh while processing (e.g. after rescan)
+  useEffect(() => {
+    if (item?.status !== 'processing') return;
+    const interval = setInterval(() => {
+      getMailById(id).then((data) => setItem(data)).catch(() => {});
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [id, item?.status]);
 
   async function handleDelete() {
     if (!confirm('Delete this mail item?')) return;
@@ -198,6 +208,26 @@ export default function MailDetail() {
             <span className="shared-by-badge"><Users size={14} /> Shared by {item.sharedBy?.name}</span>
           ) : (
             <>
+              {!editing && item.source !== 'gmail' && (
+                <button
+                  className={`edit-btn ${rescanning ? 'spin-icon' : ''}`}
+                  onClick={async () => {
+                    setRescanning(true);
+                    try {
+                      const updated = await rescanMail(id);
+                      setItem(updated);
+                    } catch (err) {
+                      alert('Rescan failed: ' + err.message);
+                    } finally {
+                      setRescanning(false);
+                    }
+                  }}
+                  disabled={rescanning || item.status === 'processing'}
+                  title="Rescan with AI"
+                >
+                  <RefreshCw size={18} />
+                </button>
+              )}
               {!editing && (
                 <button className="edit-btn" onClick={startEditing} title="Edit fields">
                   <Pencil size={18} />
@@ -407,7 +437,7 @@ export default function MailDetail() {
           </div>
         ) : (
           <>
-            <h2>{item.sender || 'Unknown Sender'}</h2>
+            <h2>{item.sender && item.sender !== 'Unknown' ? item.sender : 'Mail'}</h2>
             {item.receiver && item.receiver !== 'Unknown' && (
               <p className="receiver-line">To: {item.receiver}</p>
             )}

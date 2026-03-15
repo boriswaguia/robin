@@ -119,8 +119,8 @@ async function processMailAsync(mailId, userId, imagePaths) {
     await updateMail(mailId, userId, {
       extractedText: analysis.extractedText || '',
       summary: analysis.summary,
-      sender: analysis.sender,
-      receiver: analysis.receiver || 'Unknown',
+      sender: (analysis.sender && analysis.sender !== 'Unknown') ? analysis.sender : null,
+      receiver: (analysis.receiver && analysis.receiver !== 'Unknown') ? analysis.receiver : null,
       category: analysis.category,
       urgency: analysis.urgency,
       dueDate: analysis.dueDate || null,
@@ -188,6 +188,43 @@ router.patch('/:id/edit', async (req, res) => {
   const updated = await updateMail(req.params.id, req.user.id, updates);
   if (!updated) return res.status(404).json({ error: 'Mail not found' });
   res.json(updated);
+});
+
+// POST /api/mail/:id/rescan — re-analyze a mail item using its original images
+router.post('/:id/rescan', async (req, res) => {
+  try {
+    const item = await getMailById(req.params.id, req.user.id);
+    if (!item) return res.status(404).json({ error: 'Mail not found' });
+
+    const imageUrls = item.imageUrls || (item.imageUrl ? [item.imageUrl] : []);
+    if (imageUrls.length === 0) {
+      return res.status(400).json({ error: 'No images available to rescan' });
+    }
+
+    // Convert URL paths to absolute file paths
+    const imagePaths = imageUrls.map((url) =>
+      path.join(__dirname, '..', url.startsWith('/') ? url.slice(1) : url)
+    );
+
+    // Check that files still exist on disk
+    const missing = imagePaths.filter((p) => !fs.existsSync(p));
+    if (missing.length === imagePaths.length) {
+      return res.status(400).json({ error: 'Original image files no longer available' });
+    }
+
+    // Reset to processing state
+    const updated = await updateMail(req.params.id, req.user.id, { status: 'processing' });
+    res.json(updated);
+
+    // Re-process in background
+    const validPaths = imagePaths.filter((p) => fs.existsSync(p));
+    processMailAsync(req.params.id, req.user.id, validPaths).catch((err) => {
+      console.error(`Rescan failed for mail ${req.params.id}:`, err.message);
+    });
+  } catch (err) {
+    console.error('Rescan error:', err.message);
+    res.status(500).json({ error: 'Failed to rescan' });
+  }
 });
 
 // PATCH /api/mail/:id/reminder — set or clear a reminder

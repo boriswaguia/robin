@@ -79,7 +79,7 @@ export default function MailCard({ item, sharedBy }) {
         {isActionTaken && <span className="status-badge">{item.actionTaken?.replace('_', ' ') || item.status}</span>}
       </div>
       <div className="mail-card-body">
-        <h4>{item.sender || 'Unknown Sender'}</h4>
+        <h4>{item.sender && item.sender !== 'Unknown' ? item.sender : (item.summary ? 'Mail' : 'Unknown Sender')}</h4>
         <p>{item.summary}</p>
       </div>
       {!isActionTaken && primaryLabel && (

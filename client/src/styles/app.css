@@ -929,6 +929,7 @@ ul { list-style: none; }
 
 /* ===== Spinner ===== */
 .spin { animation: spin 1s linear infinite; }
+.spin-icon svg { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ===== Responsive ===== */

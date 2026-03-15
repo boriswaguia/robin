@@ -84,9 +84,10 @@ export default function Dashboard() {
   // Auto-pick default filter on first load
   const activeFilter = filter ?? (newCount > 0 ? 'action_needed' : 'all');
 
-  // Priority sort: urgent action-needed → action-needed → new/info → done → error/rejected
+  // Priority sort: processing → urgent action-needed → action-needed → new/info → done → error/rejected
   function prioritySort(a, b) {
     function score(m) {
+      if (m.status === 'processing') return -1; // always on top
       if (m.status === 'error' || m.status === 'rejected') return 5;
       if (m.status !== 'new') return 4; // action already taken
       if (!m.suggestedActions?.length) return 3; // informational

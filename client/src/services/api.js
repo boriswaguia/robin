@@ -76,6 +76,15 @@ export async function deleteMailItem(id) {
   return res.json();
 }
 
+export async function rescanMail(id) {
+  const res = await fetch(`${API_BASE}/${id}/rescan`, { method: 'POST', ...OPTS });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Rescan failed' }));
+    throw new Error(err.error || 'Failed to rescan');
+  }
+  return res.json();
+}
+
 export async function searchMail(params = {}) {
   const qs = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => { if (v) qs.set(k, v); });
