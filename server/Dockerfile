@@ -1,6 +1,6 @@
 FROM node:20-alpine
 
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl su-exec
 
 WORKDIR /app
 
@@ -15,8 +15,8 @@ COPY . .
 RUN mkdir -p uploads
 
 RUN adduser -D appuser && chown -R appuser:appuser /app
-USER appuser
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node index.js"]
+# Start as root so the entrypoint can fix volume ownership, then drop to appuser
+ENTRYPOINT ["sh", "/app/entrypoint.sh"]
