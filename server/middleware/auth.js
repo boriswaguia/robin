@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'robin-dev-secret-change-me';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
 
 /**
  * Express middleware to verify auth.
@@ -59,6 +60,6 @@ export function setSessionCookie(res, token) {
  * Clear the session cookie (for logout).
  */
 export function clearSessionCookie(res) {
-  res.clearCookie('robin_session', { httpOnly: true, sameSite: 'strict', path: '/' });
+  res.clearCookie('robin_session', { httpOnly: true, sameSite: 'lax', path: '/' });
 }
 

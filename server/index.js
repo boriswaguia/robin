@@ -57,7 +57,7 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: IS_PROD
-    ? true  // reflect origin — server is never publicly exposed, nginx owns the port
+    ? false // same-origin only — nginx reverse proxy handles all routing
     : (origin, cb) => {
         if (!origin) return cb(null, true);
         if (allowedOrigins.includes(origin)) return cb(null, true);
@@ -74,8 +74,8 @@ app.use(cookieParser());
 // ── General rate limit ────────────────────────────────────────────────────────
 app.use('/api/', apiLimiter);
 
-// ── Uploaded files (authenticated) ────────────────────────────────────────
-app.use('/uploads', uploadsRouter);
+// ── Uploaded files (authenticated, rate-limited) ──────────────────────────
+app.use('/uploads', apiLimiter, uploadsRouter);
 
 // ── API routes ────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRouter);

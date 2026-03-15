@@ -33,7 +33,8 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
-  const hasConsented = !!user?.consentedAt;
+  // Re-prompt if terms version changes (server sets CURRENT_TERMS_VERSION)
+  const hasConsented = !!user?.consentedAt && user?.consentVersion === '1.1';
 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout, updateUser, isAuthenticated: !!user, hasConsented }}>

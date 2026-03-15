@@ -11,7 +11,8 @@ const router = express.Router();
 // All Gmail routes require authentication except the OAuth callback
 // (callback carries a state param that ties it back to the user session)
 
-const JWT_SECRET = process.env.JWT_SECRET || 'robin-dev-secret-change-me';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
 
 // GET /api/gmail/auth — redirect user to Google OAuth consent screen
 router.get('/auth', authenticate, (req, res) => {
@@ -132,7 +133,7 @@ router.post('/sync', authenticate, async (req, res) => {
       });
     }
     console.error('Gmail sync error:', err.message);
-    res.status(500).json({ error: err.message || 'Sync failed' });
+    res.status(500).json({ error: 'Sync failed' });
   }
 });
 

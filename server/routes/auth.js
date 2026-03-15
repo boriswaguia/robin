@@ -46,8 +46,7 @@ router.post('/register', registerRules, async (req, res) => {
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      // Deliberately vague to prevent user enumeration
-      return res.status(409).json({ error: 'An account with this email already exists' });
+      return res.status(409).json({ error: 'Unable to create account. Please try again or use a different email.' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);

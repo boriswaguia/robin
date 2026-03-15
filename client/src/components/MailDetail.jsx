@@ -478,7 +478,7 @@ export default function MailDetail() {
               </div>
               <div className="edit-field">
                 <label>Due Date</label>
-                <input type="date" value={editFields.dueDate?.split('T')[0] || ''} onChange={(e) => setEditFields({ ...editFields, dueDate: e.target.value ? new Date(e.target.value).toISOString() : '' })} />
+                <input type="date" value={editFields.dueDate?.split('T')[0] || ''} onChange={(e) => setEditFields({ ...editFields, dueDate: e.target.value || '' })} />
               </div>
             </div>
             <div className="edit-actions">

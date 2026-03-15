@@ -14,6 +14,9 @@ COPY . .
 
 RUN mkdir -p uploads
 
+RUN adduser -D appuser && chown -R appuser:appuser /app
+USER appuser
+
 EXPOSE 3001
 
 CMD ["sh", "-c", "npx prisma migrate deploy && node index.js"]

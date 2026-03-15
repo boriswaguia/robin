@@ -66,7 +66,7 @@ router.get('/shared-with-me', async (req, res) => {
     res.json(items);
   } catch (err) {
     console.error('shared-with-me error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Operation failed' });
   }
 });
 
@@ -90,7 +90,7 @@ router.get('/connections', async (req, res) => {
     res.json({ sent, received });
   } catch (err) {
     console.error('connections error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Operation failed' });
   }
 });
 
@@ -107,7 +107,7 @@ router.get('/pending', async (req, res) => {
     res.json(invites);
   } catch (err) {
     console.error('pending invites error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Operation failed' });
   }
 });
 
@@ -181,7 +181,7 @@ router.patch('/:id/accept', async (req, res) => {
   res.json(updated);
   } catch (err) {
     console.error('accept invite error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Operation failed' });
   }
 });
 
@@ -197,7 +197,7 @@ router.delete('/:id/reject', async (req, res) => {
   res.json({ success: true });
   } catch (err) {
     console.error('reject invite error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Operation failed' });
   }
 });
 
@@ -222,7 +222,7 @@ router.delete('/:id', async (req, res) => {
   res.json({ success: true });
   } catch (err) {
     console.error('delete connection error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Operation failed' });
   }
 });
 
@@ -239,7 +239,7 @@ router.patch('/:id/categories', async (req, res) => {
   const { categories } = req.body; // [] to clear, ['bill','medical'] to set
   if (!Array.isArray(categories)) return res.status(400).json({ error: 'categories must be an array' });
 
-  const VALID_CATEGORIES = ['bill', 'government', 'legal', 'medical', 'insurance', 'financial', 'tax', 'personal', 'subscription', 'reminder', 'other'];
+  const VALID_CATEGORIES = ['bill', 'government', 'legal', 'medical', 'insurance', 'financial', 'tax', 'personal', 'subscription', 'reminder', 'advertisement', 'delivery', 'other'];
   const invalid = categories.filter((c) => !VALID_CATEGORIES.includes(c));
   if (invalid.length > 0) return res.status(400).json({ error: `Invalid categories: ${invalid.join(', ')}` });
 
@@ -250,7 +250,7 @@ router.patch('/:id/categories', async (req, res) => {
   res.json(updated);
   } catch (err) {
     console.error('update categories error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Operation failed' });
   }
 });
 
@@ -302,7 +302,7 @@ router.post('/mail/:mailId/share', async (req, res) => {
   res.json({ sharedWith: shareList.map((s) => s.sharedWithUserId) });
   } catch (err) {
     console.error('toggle mail share error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Operation failed' });
   }
 });
 
@@ -321,7 +321,7 @@ router.get('/mail/:mailId/shares', async (req, res) => {
   res.json({ sharedWith: shareList.map((s) => s.sharedWithUserId) });
   } catch (err) {
     console.error('get mail shares error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Operation failed' });
   }
 });
 
