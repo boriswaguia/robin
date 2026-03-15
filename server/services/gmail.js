@@ -20,7 +20,7 @@ function createOAuth2Client() {
   );
 }
 
-export function getAuthUrl() {
+export function getAuthUrl(state) {
   const client = createOAuth2Client();
   return client.generateAuthUrl({
     access_type: 'offline',
@@ -29,6 +29,7 @@ export function getAuthUrl() {
       'https://www.googleapis.com/auth/userinfo.email',
     ],
     prompt: 'consent', // always return a refresh token
+    state,             // CSRF protection — verified in callback
   });
 }
 

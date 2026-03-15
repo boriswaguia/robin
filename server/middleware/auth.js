@@ -49,7 +49,7 @@ export function setSessionCookie(res, token) {
   res.cookie('robin_session', token, {
     httpOnly: true,          // not accessible via JavaScript
     secure: IS_PROD,         // HTTPS only in production
-    sameSite: 'strict',      // no cross-site requests
+    sameSite: 'lax',         // allows top-level GET navigations (OAuth redirects, external links)
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     path: '/',
   });

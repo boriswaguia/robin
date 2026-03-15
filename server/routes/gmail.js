@@ -11,39 +11,47 @@ const router = express.Router();
 // All Gmail routes require authentication except the OAuth callback
 // (callback carries a state param that ties it back to the user session)
 
+const JWT_SECRET = process.env.JWT_SECRET || 'robin-dev-secret-change-me';
+
 // GET /api/gmail/auth — redirect user to Google OAuth consent screen
 router.get('/auth', authenticate, (req, res) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     return res.status(501).json({ error: 'Gmail integration is not configured on this server. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.' });
   }
-  const url = getAuthUrl();
+
+  // Sign a short-lived state token: prevents OAuth CSRF and identifies
+  // the user in the callback without relying on the session cookie
+  // (SameSite cookies aren't sent on cross-site redirects from Google).
+  const state = jwt.sign({ userId: req.user.id }, JWT_SECRET, { expiresIn: '10m' });
+
+  const url = getAuthUrl(state);
   res.redirect(url);
 });
 
 // GET /api/gmail/callback — Google redirects here after user approves
 router.get('/callback', authLimiter, async (req, res) => {
-  const { code, error } = req.query;
+  const { code, error, state } = req.query;
 
   if (error) {
-    return res.redirect(`/integrations?error=${encodeURIComponent(error)}`);
+    return res.redirect('/integrations?error=oauth_denied');
   }
   if (!code) {
     return res.redirect('/integrations?error=no_code');
   }
 
-  // We need to know which user this belongs to.
-  // The user must be logged in — read the session cookie directly.
-  const cookieToken = req.cookies?.robin_session;
-  if (!cookieToken) {
-    return res.redirect('/integrations?error=not_authenticated');
+  // Verify the signed state token (CSRF protection + user identification).
+  // This replaces the old approach of reading the session cookie, which
+  // failed with SameSite cookies on cross-site redirects from Google.
+  if (!state) {
+    return res.redirect('/integrations?error=missing_state');
   }
 
   let userId;
   try {
-    const payload = jwt.verify(cookieToken, process.env.JWT_SECRET || 'robin-dev-secret-change-me');
-    userId = payload.id;
+    const payload = jwt.verify(state, JWT_SECRET);
+    userId = payload.userId;
   } catch {
-    return res.redirect('/integrations?error=invalid_session');
+    return res.redirect('/integrations?error=invalid_state');
   }
 
   try {
@@ -72,7 +80,8 @@ router.get('/callback', authLimiter, async (req, res) => {
   } catch (err) {
     // SECURITY: Only log the message, not the full error (may contain tokens/PII)
     console.error('Gmail OAuth callback error:', err.message);
-    res.redirect(`/integrations?error=${encodeURIComponent(err.message)}`);
+    // Don't reflect raw error messages in the URL — use a generic code
+    res.redirect('/integrations?error=oauth_failed');
   }
 });
 

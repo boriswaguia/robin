@@ -1,9 +1,14 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { body, validationResult } from 'express-validator';
 import prisma from '../services/db.js';
 import { signToken, authenticate, setSessionCookie, clearSessionCookie } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const router = express.Router();
 
@@ -173,12 +178,27 @@ router.get('/export', authenticate, async (req, res) => {
 // DELETE /api/auth/account — GDPR: delete account and all data
 router.delete('/account', authenticate, async (req, res) => {
   try {
+    // GDPR Article 17 — right to erasure: delete uploaded files from disk
+    const userMail = await prisma.mail.findMany({
+      where: { userId: req.user.id },
+      select: { imageUrl: true, imageUrls: true },
+    });
+    for (const item of userMail) {
+      const files = Array.isArray(item.imageUrls) ? item.imageUrls : (item.imageUrl ? [item.imageUrl] : []);
+      for (const relPath of files) {
+        try {
+          const absPath = path.join(__dirname, '..', relPath);
+          if (fs.existsSync(absPath)) fs.unlinkSync(absPath);
+        } catch { /* best-effort cleanup */ }
+      }
+    }
+
     // Cascade delete handles mail, shares, connections via schema onDelete: Cascade
     await prisma.user.delete({ where: { id: req.user.id } });
     clearSessionCookie(res);
     res.json({ success: true, message: 'Your account and all data have been permanently deleted.' });
   } catch (err) {
-    console.error('Delete account error:', err);
+    console.error('Delete account error:', err.message);
     res.status(500).json({ error: 'Failed to delete account' });
   }
 });
