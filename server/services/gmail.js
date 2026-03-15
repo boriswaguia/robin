@@ -6,6 +6,7 @@ import { v4 as uuid } from 'uuid';
 import prisma from './db.js';
 import { analyzeMail, analyzeEmailText, findRelatedMail } from './ai.js';
 import { saveMail, updateMail, getAllMail } from './storage.js';
+import { encryptBuffer, isEncryptionEnabled } from './crypto.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
@@ -156,7 +157,10 @@ async function extractParts(gmail, messageId, part, attachmentPaths, textChunks)
     const ext = path.extname(part.filename) || (isPdf ? '.pdf' : '.jpg');
     const filename = `${uuid()}${ext}`;
     const filePath = path.join(UPLOADS_DIR, filename);
-    fs.writeFileSync(filePath, Buffer.from(attRes.data.data, 'base64'));
+    let buf = Buffer.from(attRes.data.data, 'base64');
+    // Encrypt attachments at rest (same as camera-scan pipeline)
+    if (isEncryptionEnabled()) buf = encryptBuffer(buf);
+    fs.writeFileSync(filePath, buf);
     attachmentPaths.push(filePath);
   }
 }
@@ -200,8 +204,8 @@ async function analyzeGmailItem(mailId, userId, attachmentPaths, emailBody, subj
     await updateMail(mailId, userId, {
       extractedText: analysis.extractedText || '',
       summary: analysis.summary,
-      sender: analysis.sender || sender,
-      receiver: analysis.receiver || 'Unknown',
+      sender: (analysis.sender && analysis.sender !== 'Unknown') ? analysis.sender : sender || null,
+      receiver: (analysis.receiver && analysis.receiver !== 'Unknown') ? analysis.receiver : null,
       category: analysis.category,
       urgency: analysis.urgency,
       dueDate: analysis.dueDate || null,

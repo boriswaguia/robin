@@ -11,6 +11,7 @@ export function getCategoryColor(category) {
     subscription: 'cat-purple',
     reminder: 'cat-indigo',
     tax: 'cat-yellow',
+    delivery: 'cat-amber',
     other: 'cat-gray',
   };
   return map[category] || 'cat-gray';
@@ -29,6 +30,7 @@ export function getCategoryIcon(category) {
     subscription: '📰',
     reminder: '🎙️',
     tax: '🧾',
+    delivery: '📦',
     other: '📄',
   };
   return map[category] || '📄';
