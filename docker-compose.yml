@@ -25,6 +25,7 @@ services:
       DATABASE_URL: postgresql://robin:${POSTGRES_PASSWORD}@db:5432/robin?schema=public
       GEMINI_API_KEY: ${GEMINI_API_KEY:?GEMINI_API_KEY is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
       NODE_ENV: production
       PORT: 3001
     volumes:

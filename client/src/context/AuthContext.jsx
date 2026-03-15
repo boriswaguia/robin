@@ -23,14 +23,20 @@ export function AuthProvider({ children }) {
     setUser(userData);
   }
 
+  function updateUser(partial) {
+    setUser((prev) => (prev ? { ...prev, ...partial } : prev));
+  }
+
   async function logout() {
     // Ask the server to clear the cookie
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     setUser(null);
   }
 
+  const hasConsented = !!user?.consentedAt;
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser, isAuthenticated: !!user, hasConsented }}>
       {children}
     </AuthContext.Provider>
   );

@@ -8,6 +8,7 @@ import prisma from '../services/db.js';
 import { analyzeMail, findRelatedMail } from '../services/ai.js';
 import { getAllMail, getMailById, saveMail, updateMail, deleteMail, getRelatedMail, searchMail, getContacts, getMailByContact, getDueReminders } from '../services/storage.js';
 import { authenticate } from '../middleware/auth.js';
+import { encryptBuffer, isEncryptionEnabled } from '../services/crypto.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const router = express.Router();
@@ -45,6 +46,14 @@ router.post('/scan', upload.array('images', 10), async (req, res) => {
 
     const imageUrls = files.map((f) => `/uploads/${f.filename}`);
     const imagePaths = files.map((f) => f.path);
+
+    // Encrypt uploaded files on disk if encryption is enabled
+    if (isEncryptionEnabled()) {
+      for (const fp of imagePaths) {
+        const plain = fs.readFileSync(fp);
+        fs.writeFileSync(fp, encryptBuffer(plain));
+      }
+    }
 
     // Save immediately with status "processing" — return fast
     const mailItem = await saveMail({

@@ -4,6 +4,7 @@ import {
   getSharingConnections, getPendingInvites, sendSharingInvite,
   acceptInvite, rejectInvite, removeConnection, updateSharedCategories,
 } from '../services/api';
+import { DataPrivacyCard } from './ConsentScreen';
 
 async function fetchGmailStatus() {
   const res = await fetch('/api/gmail/status', { credentials: 'include' });
@@ -345,6 +346,9 @@ export default function Integrations() {
           </>
         )}
       </div>
+
+      {/* ── Data & Privacy ─────────────────────────────────────────────── */}
+      <DataPrivacyCard />
     </div>
   );
 }

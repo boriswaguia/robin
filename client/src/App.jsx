@@ -9,6 +9,7 @@ import Directory from './components/Directory';
 import ContactDetail from './components/ContactDetail';
 import AuthPage from './components/AuthPage';
 import Integrations from './components/Integrations';
+import ConsentScreen from './components/ConsentScreen';
 
 function NotFound() {
   return (
@@ -21,7 +22,7 @@ function NotFound() {
 }
 
 function AppRoutes() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, hasConsented, updateUser, loading } = useAuth();
 
   if (loading) {
     return <div className="loading">Loading…</div>;
@@ -29,6 +30,10 @@ function AppRoutes() {
 
   if (!isAuthenticated) {
     return <AuthPage />;
+  }
+
+  if (!hasConsented) {
+    return <ConsentScreen onConsent={(userData) => updateUser(userData)} />;
   }
 
   return (

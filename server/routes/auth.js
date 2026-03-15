@@ -104,13 +104,82 @@ router.get('/me', authenticate, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: { id: true, email: true, name: true, createdAt: true },
+      select: { id: true, email: true, name: true, createdAt: true, consentedAt: true, consentVersion: true },
     });
 
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json(user);
   } catch {
     res.status(500).json({ error: 'Failed to get user info' });
+  }
+});
+
+// Current terms version — bump this whenever terms change
+const CURRENT_TERMS_VERSION = '1.0';
+
+// POST /api/auth/consent — record GDPR consent
+router.post('/consent', authenticate, async (req, res) => {
+  try {
+    const { accepted } = req.body;
+    if (!accepted) {
+      return res.status(400).json({ error: 'You must accept the terms to continue' });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        consentedAt: new Date(),
+        consentVersion: CURRENT_TERMS_VERSION,
+      },
+      select: { id: true, email: true, name: true, consentedAt: true, consentVersion: true },
+    });
+
+    res.json(user);
+  } catch (err) {
+    console.error('Consent error:', err);
+    res.status(500).json({ error: 'Failed to record consent' });
+  }
+});
+
+// GET /api/auth/export — GDPR: export all personal data
+router.get('/export', authenticate, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { id: true, email: true, name: true, createdAt: true, consentedAt: true, consentVersion: true },
+    });
+    const mail = await prisma.mail.findMany({
+      where: { userId: req.user.id },
+      select: {
+        id: true, sender: true, receiver: true, summary: true, extractedText: true,
+        category: true, urgency: true, dueDate: true, amountDue: true, status: true,
+        actionTaken: true, actionNote: true, source: true, createdAt: true,
+        keyDetails: true, actionableInfo: true,
+      },
+    });
+    const connections = await prisma.shareConnection.findMany({
+      where: { OR: [{ fromUserId: req.user.id }, { toUserId: req.user.id }] },
+      select: { id: true, fromUserId: true, toUserId: true, status: true, sharedCategories: true, createdAt: true },
+    });
+
+    res.set('Content-Disposition', 'attachment; filename="robin-data-export.json"');
+    res.json({ exportedAt: new Date().toISOString(), user, mail, connections });
+  } catch (err) {
+    console.error('Export error:', err);
+    res.status(500).json({ error: 'Failed to export data' });
+  }
+});
+
+// DELETE /api/auth/account — GDPR: delete account and all data
+router.delete('/account', authenticate, async (req, res) => {
+  try {
+    // Cascade delete handles mail, shares, connections via schema onDelete: Cascade
+    await prisma.user.delete({ where: { id: req.user.id } });
+    clearSessionCookie(res);
+    res.json({ success: true, message: 'Your account and all data have been permanently deleted.' });
+  } catch (err) {
+    console.error('Delete account error:', err);
+    res.status(500).json({ error: 'Failed to delete account' });
   }
 });
 

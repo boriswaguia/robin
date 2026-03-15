@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import fs from 'fs';
 import path from 'path';
+import { decryptBuffer, isEncryptionEnabled } from './crypto.js';
 
 const PROMPT = `You are Robin, a smart mail and document assistant. Analyze the provided image(s) of a piece of mail or correspondence.
 If multiple images are provided, they are PAGES OF THE SAME DOCUMENT — read them all together as one complete document.
@@ -156,7 +157,12 @@ export async function analyzeMail(imagePaths) {
   const imageParts = paths.map((imgPath) => {
     const ext = path.extname(imgPath).toLowerCase();
     const mimeType = MIME_MAP[ext] || 'image/jpeg';
-    const data = fs.readFileSync(imgPath).toString('base64');
+    let buf = fs.readFileSync(imgPath);
+    // Decrypt if file was encrypted at rest
+    if (isEncryptionEnabled()) {
+      try { buf = decryptBuffer(buf); } catch { /* unencrypted legacy file */ }
+    }
+    const data = buf.toString('base64');
     return { inlineData: { mimeType, data } };
   });
 
