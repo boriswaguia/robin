@@ -267,7 +267,7 @@
     "pageTitle": "Einstellungen",
     "profile": {
       "title": "Ihr Konto",
-      "signedInAs": "Angemeldet als <1>{{name}}</1>",
+      "signedInAs": "Angemeldet als {{name}}",
       "email": "E-Mail",
       "name": "Name",
       "memberSince": "Mitglied seit",
@@ -277,7 +277,7 @@
     "gmail": {
       "title": "Gmail",
       "description": "Synchronisieren Sie wichtige E-Mails — Rechnungen, Erinnerungen und Briefe mit Anhängen — direkt in Ihren Robin-Posteingang.",
-      "connectedAs": "Verbunden als <1>{{email}}</1>",
+      "connectedAs": "Verbunden als {{email}}",
       "howItWorks": "So funktioniert es",
       "howStep1": "Scannt Ihre letzten 7 Tage im Primären und Aktualisierungen-Posteingang",
       "howStep2": "Überspringt automatisch Newsletter, Werbung und soziale E-Mails",
@@ -297,7 +297,7 @@
       "disconnected": "Nicht verbunden",
       "whatYouNeed": "Was Sie benötigen",
       "needStep1": "Ein Google-Konto mit einem Gmail-Postfach",
-      "needStep2": "Robin fordert nur <1>Lesezugriff</1> an — es kann keine E-Mails senden oder löschen",
+      "needStep2": "Robin fordert nur Lesezugriff an — es kann keine E-Mails senden oder löschen",
       "connectGmail": "Gmail verbinden",
       "loadError": "Gmail-Status konnte nicht geladen werden"
     },

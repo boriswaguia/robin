@@ -267,7 +267,7 @@
     "pageTitle": "Paramètres",
     "profile": {
       "title": "Votre compte",
-      "signedInAs": "Connecté en tant que <1>{{name}}</1>",
+      "signedInAs": "Connecté en tant que {{name}}",
       "email": "E-mail",
       "name": "Nom",
       "memberSince": "Membre depuis",
@@ -277,7 +277,7 @@
     "gmail": {
       "title": "Gmail",
       "description": "Synchronisez les e-mails importants — factures, rappels et lettres avec pièces jointes — directement dans votre boîte Robin.",
-      "connectedAs": "Connecté en tant que <1>{{email}}</1>",
+      "connectedAs": "Connecté en tant que {{email}}",
       "howItWorks": "Comment ça marche",
       "howStep1": "Analyse les 7 derniers jours de votre boîte principale",
       "howStep2": "Ignore automatiquement les newsletters, promotions et e-mails sociaux",
@@ -297,7 +297,7 @@
       "disconnected": "Non connecté",
       "whatYouNeed": "Ce dont vous avez besoin",
       "needStep1": "Un compte Google avec une boîte Gmail",
-      "needStep2": "Robin ne demandera qu'un accès <1>en lecture seule</1> — il ne peut ni envoyer ni supprimer vos e-mails",
+      "needStep2": "Robin ne demandera qu'un accès en lecture seule — il ne peut ni envoyer ni supprimer vos e-mails",
       "connectGmail": "Connecter Gmail",
       "loadError": "Impossible de charger le statut Gmail"
     },

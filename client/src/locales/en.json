@@ -267,7 +267,7 @@
     "pageTitle": "Settings",
     "profile": {
       "title": "Your Account",
-      "signedInAs": "Signed in as <1>{{name}}</1>",
+      "signedInAs": "Signed in as {{name}}",
       "email": "Email",
       "name": "Name",
       "memberSince": "Member since",
@@ -277,7 +277,7 @@
     "gmail": {
       "title": "Gmail",
       "description": "Sync actionable emails — invoices, bills, reminders, and letters with attachments — directly into your Robin inbox.",
-      "connectedAs": "Connected as <1>{{email}}</1>",
+      "connectedAs": "Connected as {{email}}",
       "howItWorks": "How it works",
       "howStep1": "Scans your last 7 days of Primary & Updates inbox",
       "howStep2": "Automatically skips newsletters, promotions, and social emails",
@@ -297,7 +297,7 @@
       "disconnected": "Not connected",
       "whatYouNeed": "What you'll need",
       "needStep1": "A Google account with a Gmail inbox",
-      "needStep2": "Robin will only request <1>read-only</1> access — it cannot send or delete emails",
+      "needStep2": "Robin will only request read-only access — it cannot send or delete emails",
       "connectGmail": "Connect Gmail",
       "loadError": "Could not load Gmail status"
     },
