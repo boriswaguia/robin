@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Mail, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 
 export default function AuthPage() {
   const [mode, setMode] = useState('login'); // 'login' | 'register'
@@ -22,7 +23,7 @@ export default function AuthPage() {
     const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
     const body = mode === 'login'
       ? { email, password }
-      : { email, name, password };
+      : { email, name, password, language: (i18n.language || 'en').substring(0, 2) };
 
     try {
       const res = await fetch(endpoint, {

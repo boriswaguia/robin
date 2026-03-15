@@ -16,11 +16,15 @@ const router = express.Router();
 // Apply tight rate limit to all auth endpoints
 router.use(authLimiter);
 
+// Supported UI languages
+const SUPPORTED_LANGS = new Set(['en', 'fr', 'de']);
+
 // --- Validation rules ---
 const registerRules = [
   body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
   body('name').trim().isLength({ min: 1, max: 80 }).escape().withMessage('Name is required (max 80 chars)'),
   body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+  body('language').optional().isIn([...SUPPORTED_LANGS]).withMessage('Unsupported language'),
 ];
 
 const loginRules = [
@@ -43,7 +47,7 @@ router.post('/register', registerRules, async (req, res) => {
   if (invalid) return;
 
   try {
-    const { email, name, password } = req.body;
+    const { email, name, password, language } = req.body;
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -52,9 +56,12 @@ router.post('/register', registerRules, async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const user = await prisma.user.create({
-      data: { email, name, password: hashedPassword },
-    });
+    const data = { email, name, password: hashedPassword };
+    if (language && SUPPORTED_LANGS.has(language)) {
+      data.language = language;
+    }
+
+    const user = await prisma.user.create({ data });
 
     const token = signToken(user);
     setSessionCookie(res, token);
@@ -136,7 +143,6 @@ router.get('/me', authenticate, async (req, res) => {
 });
 
 // PUT /api/auth/language — update the user's preferred language
-const SUPPORTED_LANGS = new Set(['en', 'fr', 'de']);
 router.put('/language', authenticate, async (req, res) => {
   const { language } = req.body;
   if (!language || !SUPPORTED_LANGS.has(language)) {
