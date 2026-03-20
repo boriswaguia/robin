@@ -222,7 +222,7 @@ export default function MailDetail() {
   return (
     <div className="mail-detail">
       <div className="detail-header">
-        <button className="back-btn" onClick={() => navigate('/')}>
+        <button className="back-btn" onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')}>
           <ArrowLeft size={20} /> {t('common.back')}
         </button>
         <div className="detail-header-actions">

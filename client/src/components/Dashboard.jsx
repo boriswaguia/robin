@@ -239,7 +239,7 @@ export default function Dashboard() {
       ) : (
         <div className="mail-list">
           {filtered.map((item) => (
-            <Link to={`/mail/${item.id}`} key={item.id} className="mail-link">
+            <Link to={`/mail/${item.id}`} key={item.id} className="mail-link" state={{ from: '/' }}>
               <MailCard item={item} />
               <ChevronRight size={18} className="chevron" />
             </Link>
@@ -261,7 +261,7 @@ export default function Dashboard() {
           {sharedExpanded && (
             <div className="mail-list">
               {sharedMail.map((item) => (
-                <Link to={`/mail/${item.id}`} key={item.id} className="mail-link">
+                <Link to={`/mail/${item.id}`} key={item.id} className="mail-link" state={{ from: '/' }}>
                   <MailCard item={item} sharedBy={item.sharedBy} />
                   <ChevronRight size={18} className="chevron" />
                 </Link>

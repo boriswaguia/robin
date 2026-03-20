@@ -44,7 +44,7 @@ export default function ContactDetail() {
           <h3>{t('contact.sentBy', { name: contactName, count: senderMail.length })}</h3>
           <div className="mail-list">
             {senderMail.map((item) => (
-              <Link to={`/mail/${item.id}`} key={item.id} className="mail-link">
+              <Link to={`/mail/${item.id}`} key={item.id} className="mail-link" state={{ from: '/directory' }}>
                 <MailCard item={item} />
                 <ChevronRight size={18} className="chevron" />
               </Link>
@@ -58,7 +58,7 @@ export default function ContactDetail() {
           <h3>{t('contact.addressedTo', { name: contactName, count: receiverMail.length })}</h3>
           <div className="mail-list">
             {receiverMail.map((item) => (
-              <Link to={`/mail/${item.id}`} key={item.id} className="mail-link">
+              <Link to={`/mail/${item.id}`} key={item.id} className="mail-link" state={{ from: '/directory' }}>
                 <MailCard item={item} />
                 <ChevronRight size={18} className="chevron" />
               </Link>

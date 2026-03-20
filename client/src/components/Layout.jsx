@@ -4,9 +4,21 @@ import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 
 export default function Layout({ children }) {
-  const { pathname } = useLocation();
+  const { pathname, state } = useLocation();
   const { user, logout } = useAuth();
   const { t } = useTranslation();
+
+  // When inside a detail page (/mail/:id), highlight the tab we came from
+  const fromPath = state?.from;
+  function navActive(path) {
+    if (path === '/directory') return pathname.startsWith('/directory');
+    if (pathname === path) return true;
+    if (pathname.startsWith('/mail/')) {
+      // Highlight the originating tab; default to Home
+      return fromPath ? fromPath === path : path === '/';
+    }
+    return false;
+  }
 
   return (
     <div className="app">
@@ -34,11 +46,11 @@ export default function Layout({ children }) {
       <main className="main">{children}</main>
 
       <nav className="bottom-nav">
-        <Link to="/" className={`nav-item ${pathname === '/' ? 'active' : ''}`}>
+        <Link to="/" className={`nav-item ${navActive('/') ? 'active' : ''}`}>
           <Home size={22} />
           <span>{t('layout.home')}</span>
         </Link>
-        <Link to="/agenda" className={`nav-item ${pathname === '/agenda' ? 'active' : ''}`}>
+        <Link to="/agenda" className={`nav-item ${navActive('/agenda') ? 'active' : ''}`}>
           <ClipboardList size={22} />
           <span>{t('layout.agenda')}</span>
         </Link>
@@ -46,11 +58,11 @@ export default function Layout({ children }) {
           <ScanLine size={26} />
           <span>{t('layout.scan')}</span>
         </Link>
-        <Link to="/calendar" className={`nav-item ${pathname === '/calendar' ? 'active' : ''}`}>
+        <Link to="/calendar" className={`nav-item ${navActive('/calendar') ? 'active' : ''}`}>
           <CalendarDays size={22} />
           <span>{t('layout.calendar')}</span>
         </Link>
-        <Link to="/directory" className={`nav-item ${pathname.startsWith('/directory') ? 'active' : ''}`}>
+        <Link to="/directory" className={`nav-item ${navActive('/directory') ? 'active' : ''}`}>
           <BookUser size={22} />
           <span>{t('layout.directory')}</span>
         </Link>

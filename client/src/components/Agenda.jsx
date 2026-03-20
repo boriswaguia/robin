@@ -40,7 +40,7 @@ function AgendaItem({ item, onDone, t }) {
   }
 
   return (
-    <Link to={`/mail/${item.id}`} className={`agenda-item${done ? ' agenda-item-done' : ''}`}>
+    <Link to={`/mail/${item.id}`} className={`agenda-item${done ? ' agenda-item-done' : ''}`} state={{ from: '/agenda' }}>
       <button
         className={`agenda-check${done ? ' checked' : ''}`}
         onClick={handleMarkDone}
