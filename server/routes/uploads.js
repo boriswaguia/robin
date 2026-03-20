@@ -52,7 +52,7 @@ router.get('/:filename', async (req, res) => {
     where: {
       OR: [
         { imageUrl: uploadPath },
-        { imageUrls: { string_contains: uploadPath } },
+        { imageUrls: { array_contains: uploadPath } },
       ],
     },
     select: { id: true, userId: true, category: true, source: true },
